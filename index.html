@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#080b18" />
+  <title>Pulse Grid</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <div id="boot-screen" class="boot-screen" aria-label="Chargement">
+      <div class="brand-mark large">✦</div>
+      <div class="boot-wordmark">PULSE GRID</div>
+      <div class="loader"><span></span></div>
+    </div>
+
+    <main id="screens">
+      <section id="screen-home" class="screen active" aria-labelledby="home-title">
+        <header class="topbar home-topbar">
+          <div class="brand-lockup">
+            <div class="brand-mark">✦</div>
+            <div>
+              <div class="eyebrow">ARCADE PUZZLE</div>
+              <h1 id="home-title">PULSE GRID</h1>
+            </div>
+          </div>
+          <button class="icon-button" data-action="toggle-sound" aria-label="Activer ou couper le son"><span id="sound-icon">◖</span></button>
+        </header>
+
+        <div class="home-content page-content">
+          <div class="player-strip">
+            <div class="level-badge"><span>NIV.</span><strong id="home-level">1</strong></div>
+            <div class="xp-track-wrap">
+              <div class="row-between"><span>Progression</span><span id="home-xp-label">0 / 400 XP</span></div>
+              <div class="xp-track"><span id="home-xp-fill"></span></div>
+            </div>
+            <div class="currency-pill"><span class="coin-icon">◆</span><strong id="home-coins">240</strong></div>
+          </div>
+
+          <article class="hero-card">
+            <div class="hero-orbit orbit-one"></div>
+            <div class="hero-orbit orbit-two"></div>
+            <div class="hero-copy">
+              <span class="eyebrow accent">MODE CLASSIQUE</span>
+              <h2>Fais vibrer<br />la grille.</h2>
+              <p>Assemble tes fragments, déclenche des impulsions et construis ton meilleur combo.</p>
+              <div class="hero-record"><span>MEILLEUR SCORE</span><strong id="home-best">0</strong></div>
+              <button class="primary-button hero-play" data-action="play"><span>JOUER</span><b>→</b></button>
+            </div>
+            <div class="hero-visual" aria-hidden="true">
+              <span class="hero-tile tile-a"></span><span class="hero-tile tile-b"></span><span class="hero-tile tile-c"></span>
+              <span class="hero-tile tile-d"></span><span class="hero-tile tile-e"></span><span class="hero-tile tile-f"></span>
+              <span class="hero-spark spark-a">✦</span><span class="hero-spark spark-b">·</span>
+            </div>
+          </article>
+
+          <div class="section-heading"><h2>Ton espace</h2><span class="section-line"></span></div>
+          <div class="quick-grid">
+            <button class="quick-card shop-card" data-route="shop"><span class="quick-icon">◆</span><span>Boutique</span><small>Skins & effets</small></button>
+            <button class="quick-card missions-card" data-route="missions"><span class="quick-icon">✓</span><span>Missions</span><small id="home-mission-count">0 à réclamer</small></button>
+            <button class="quick-card style-card" data-route="collection"><span class="quick-icon">◈</span><span>Atelier</span><small>Personnalise ton jeu</small></button>
+            <button class="quick-card stats-card" data-route="stats"><span class="quick-icon">↗</span><span>Stats</span><small>Ta progression</small></button>
+          </div>
+
+          <article class="daily-card" data-route="missions">
+            <div class="daily-icon">✦</div>
+            <div class="daily-copy"><span class="eyebrow">DÉFI DU JOUR</span><strong id="home-mission-title">Chargement…</strong><div class="mini-progress"><span id="home-mission-fill"></span></div></div>
+            <span class="daily-arrow">›</span>
+          </article>
+        </div>
+      </section>
+
+      <section id="screen-game" class="screen game-screen" aria-label="Partie en cours">
+        <header class="game-topbar">
+          <button class="icon-button dark" data-action="game-home" aria-label="Retour à l'accueil">‹</button>
+          <div class="game-stat"><span>SCORE</span><strong id="game-score">0</strong></div>
+          <div class="game-stat best"><span>MEILLEUR</span><strong id="game-best">0</strong></div>
+          <button class="icon-button dark" data-action="pause" aria-label="Pause">Ⅱ</button>
+        </header>
+        <div class="game-content">
+          <div class="combo-row"><span id="game-message">Choisis un fragment et fais-le glisser.</span><span id="combo-badge" class="combo-badge hidden">COMBO ×<b>0</b></span></div>
+          <div class="charge-row" aria-label="Charge Pulse"><div class="charge-copy"><b>CHARGE PULSE</b><small id="charge-message">Dissous des lignes pour charger une rafale.</small></div><div class="charge-track"><span id="charge-fill"></span></div><strong id="charge-value">0%</strong></div>
+          <div id="board-wrap" class="board-wrap">
+            <div id="board" class="board" role="grid" aria-label="Grille de jeu"></div>
+            <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+          </div>
+          <div class="game-subbar"><div><span class="eyebrow">FRAGMENTS</span><strong>Compose ton prochain mouvement</strong></div><button class="text-button" data-action="hint">INDICE <span>✧</span></button></div>
+          <div id="piece-tray" class="piece-tray" aria-label="Fragments disponibles"></div>
+          <div class="game-tip"><span class="tip-dot"></span><span>Astuce : tu peux aussi toucher un fragment, puis toucher la grille.</span></div>
+        </div>
+      </section>
+
+      <section id="screen-shop" class="screen" aria-labelledby="shop-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home">‹</button><div><div class="eyebrow">PERSONNALISE TON UNIVERS</div><h1 id="shop-title">Boutique</h1></div><div class="currency-pill"><span class="coin-icon">◆</span><strong id="shop-coins">0</strong></div></header>
+        <div class="page-content subpage-content">
+          <div class="shop-tabs"><button class="tab-button active" data-shop-tab="skins">Fragments</button><button class="tab-button" data-shop-tab="boards">Plateaux</button><button class="tab-button" data-shop-tab="effects">Impulsions</button></div>
+          <div id="shop-content" class="catalog-grid"></div>
+        </div>
+      </section>
+
+      <section id="screen-collection" class="screen" aria-labelledby="collection-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home">‹</button><div><div class="eyebrow">TON STYLE</div><h1 id="collection-title">Atelier</h1></div><div class="header-symbol">◈</div></header>
+        <div class="page-content subpage-content"><div id="collection-content"></div></div>
+      </section>
+
+      <section id="screen-missions" class="screen" aria-labelledby="missions-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home">‹</button><div><div class="eyebrow">RÉCOMPENSES QUOTIDIENNES</div><h1 id="missions-title">Missions</h1></div><div class="header-symbol">✓</div></header>
+        <div class="page-content subpage-content">
+          <article class="mission-intro"><div class="mission-intro-icon">✦</div><div><span class="eyebrow accent">NOUVELLES MISSIONS À MINUIT</span><h2>Chaque action compte.</h2><p>Valide tes objectifs pour gagner des PulseCoins.</p></div></article>
+          <div id="missions-content" class="missions-list"></div>
+        </div>
+      </section>
+
+      <section id="screen-stats" class="screen" aria-labelledby="stats-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home">‹</button><div><div class="eyebrow">TON PARCOURS</div><h1 id="stats-title">Statistiques</h1></div><div class="header-symbol">↗</div></header>
+        <div class="page-content subpage-content"><div id="stats-content"></div></div>
+      </section>
+    </main>
+
+    <nav id="bottom-nav" class="bottom-nav" aria-label="Navigation principale">
+      <button data-route="home" class="nav-item active"><span>⌂</span><small>Accueil</small></button>
+      <button data-route="shop" class="nav-item"><span>◆</span><small>Boutique</small></button>
+      <button data-route="missions" class="nav-item"><span>✓</span><small>Missions</small></button>
+      <button data-route="collection" class="nav-item"><span>◈</span><small>Atelier</small></button>
+    </nav>
+
+    <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
+      <div id="modal-card" class="modal-card" role="dialog" aria-modal="true"></div>
+    </div>
+    <div id="toast" class="toast" role="status"></div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
