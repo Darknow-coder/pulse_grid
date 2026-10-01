@@ -25,11 +25,14 @@ Puis ouvre `http://localhost:8000` sur l'ordinateur, ou l'adresse IP locale depu
 - Grille 8 × 8 et fragments de formes variées.
 - Placement par glisser-déposer tactile ou par sélection puis toucher de la grille.
 - Suppression des lignes et colonnes, score, combos, animations, particules et vibration quand disponible.
+- Plateau plus contrasté et fragments avec une palette de couleurs variée.
+- Début de partie guidé par des fragments simples avant de revenir à la génération pondérée.
 - Charge Pulse progressive : une surcharge déclenche une Pulse Burst avec bonus de score et de particules.
 - Prévisualisation des cases proches d'une ligne complète et placement tactile centré plus naturel.
 - Génération pondérée des fragments pour limiter les situations injustes.
 - Fin de partie, meilleur score et bouton rejouer.
 - Niveau, XP, récompense de niveau et statistiques cumulées.
+- Route de progression verticale avec milestones, récompenses récupérables et déblocages reliés à la collection.
 - PulseCoins gagnés en fin de partie et via les missions.
 - Boutique virtuelle avec skins de fragments, plateaux, effets de destruction et bonus consommables.
 - Packs de bonus achetables avec des PulseCoins.
@@ -38,7 +41,8 @@ Puis ouvre `http://localhost:8000` sur l'ordinateur, ou l'adresse IP locale depu
 - Atelier pour équiper les éléments débloqués.
 - Missions quotidiennes renouvelées selon la date locale.
 - Sauvegarde automatique avec `localStorage`.
-- Feedback audio léger, désactivable depuis l'accueil.
+- Feedback audio court par action, vibration mobile facultative, réglages effets/musique/volume sauvegardés localement.
+- Feedback visuel animé pour les gros coups, avec messages gradués et voix.
 
 ## Prochaines améliorations utiles
 

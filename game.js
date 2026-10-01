@@ -26,6 +26,27 @@
     { id: 'line-4-v', cells: [[0, 0], [1, 0], [2, 0], [3, 0]] }
   ];
 
+  const PIECE_COLORS = {
+    dot: { primary: '#65e8d0', secondary: '#23b7d4', soft: 'rgba(101,232,208,.28)' },
+    'domino-h': { primary: '#65e8d0', secondary: '#299bd6', soft: 'rgba(101,232,208,.28)' },
+    'domino-v': { primary: '#a894ff', secondary: '#625dff', soft: 'rgba(139,124,255,.28)' },
+    'tri-h': { primary: '#ffe08a', secondary: '#ff9b70', soft: 'rgba(255,209,122,.3)' },
+    'tri-v': { primary: '#a6f58c', secondary: '#38cba7', soft: 'rgba(143,240,187,.28)' },
+    square: { primary: '#ffadca', secondary: '#ff5d91', soft: 'rgba(255,127,158,.28)' },
+    'l-small': { primary: '#91d9ff', secondary: '#558cff', soft: 'rgba(110,184,255,.28)' },
+    'l-big': { primary: '#d1f878', secondary: '#54d99d', soft: 'rgba(196,243,109,.28)' },
+    t: { primary: '#e4a5ff', secondary: '#9472ff', soft: 'rgba(224,154,255,.28)' },
+    z: { primary: '#ffb18b', secondary: '#ff637c', soft: 'rgba(255,155,112,.28)' },
+    plus: { primary: '#f4b6ff', secondary: '#b56cff', soft: 'rgba(224,154,255,.28)' },
+    'line-4-h': { primary: '#75e9ff', secondary: '#4c8dff', soft: 'rgba(110,184,255,.28)' },
+    'line-4-v': { primary: '#ffe28a', secondary: '#ff856e', soft: 'rgba(255,209,122,.3)' }
+  };
+  const getPieceColor = id => PIECE_COLORS[id] || PIECE_COLORS.dot;
+  const STARTER_WAVES = [
+    ['domino-h', 'square', 'tri-h'],
+    ['domino-v', 'l-small', 'line-4-h']
+  ];
+
   const CATALOG = {
     skins: [
       { id: 'aurora', name: 'Aurora', price: 0, description: 'Le calme électrique des premières parties.', primary: '#65e8d0', secondary: '#8b7cff', soft: 'rgba(101,232,208,.18)', contrast: '#07141b' },
@@ -35,10 +56,10 @@
       { id: 'violet', name: 'Ultraviolet', price: 460, description: 'Le mode nuit des architectes de grille.', primary: '#e09aff', secondary: '#766cff', soft: 'rgba(224,154,255,.18)', contrast: '#1a0c24' }
     ],
     boards: [
-      { id: 'night', name: 'Nuit profonde', price: 0, description: 'Le plateau original de Pulse Grid.', shell: '#101a2e', cell: '#18233b', glow: 'rgba(101,232,208,.16)', preview: '#17233c' },
-      { id: 'glass', name: 'Verre fumé', price: 220, description: 'Une surface claire et réfléchissante.', shell: '#172536', cell: '#26384c', glow: 'rgba(120,217,255,.2)', preview: '#223548' },
-      { id: 'carbon', name: 'Carbone', price: 300, description: 'Contraste mat, sensation arcade.', shell: '#161719', cell: '#26282c', glow: 'rgba(255,155,112,.16)', preview: '#232426' },
-      { id: 'nebula', name: 'Nébuleuse', price: 400, description: 'Le vide spatial pour les longues séries.', shell: '#1b1734', cell: '#2a2350', glow: 'rgba(224,154,255,.19)', preview: '#2b2250' }
+      { id: 'night', name: 'Nuit profonde', price: 0, description: 'Le plateau original de Pulse Grid.', shell: '#182846', cell: '#263b5d', glow: 'rgba(101,232,208,.2)', preview: '#203452' },
+      { id: 'glass', name: 'Verre fumé', price: 220, description: 'Une surface claire et réfléchissante.', shell: '#20384c', cell: '#31536a', glow: 'rgba(120,217,255,.24)', preview: '#2d4b60' },
+      { id: 'carbon', name: 'Carbone', price: 300, description: 'Contraste mat, sensation arcade.', shell: '#22252d', cell: '#343a43', glow: 'rgba(255,155,112,.2)', preview: '#30343b' },
+      { id: 'nebula', name: 'Nébuleuse', price: 400, description: 'Le vide spatial pour les longues séries.', shell: '#2a2550', cell: '#3b326b', glow: 'rgba(224,154,255,.24)', preview: '#3a3263' }
     ],
     effects: [
       { id: 'burst', name: 'Burst', price: 0, description: 'Éclats géométriques à chaque ligne.', icon: '✦' },
@@ -58,6 +79,39 @@
     ]
   };
 
+  const PROGRESSION_REWARDS = [
+    { level: 1, type: 'coins', amount: 60, icon: '◆', title: 'Impulsion de départ' },
+    { level: 2, type: 'booster', id: 'hammer', amount: 1, icon: '⌁', title: 'Marteau' },
+    { level: 3, type: 'coins', amount: 90, icon: '◆', title: 'Réserve de PulseCoins' },
+    { level: 4, type: 'booster', id: 'reroll', amount: 1, icon: '⟳', title: 'Recomposition' },
+    { level: 5, type: 'skin', id: 'cobalt', icon: '✦', title: 'Skin Cobalt', milestone: true },
+    { level: 6, type: 'coins', amount: 120, icon: '◆', title: 'Réserve renforcée' },
+    { level: 7, type: 'pack', id: 'starter', amount: 1, icon: '▣', title: 'Pack de départ' },
+    { level: 8, type: 'booster', id: 'pulse-core', amount: 1, icon: '⚡', title: 'Noyau Pulse' },
+    { level: 9, type: 'coins', amount: 140, icon: '◆', title: 'Réserve brillante' },
+    { level: 10, type: 'board', id: 'glass', icon: '▦', title: 'Plateau Verre fumé', milestone: true },
+    { level: 11, type: 'coins', amount: 150, icon: '◆', title: 'PulseCoins' },
+    { level: 12, type: 'booster', id: 'hammer', amount: 2, icon: '⌁', title: 'Deux Marteaux' },
+    { level: 13, type: 'effect', id: 'ring', icon: '◎', title: 'Effet Anneaux' },
+    { level: 14, type: 'coins', amount: 180, icon: '◆', title: 'Réserve experte' },
+    { level: 15, type: 'skin', id: 'lime', icon: '✦', title: 'Skin Lime Shift', milestone: true },
+    { level: 16, type: 'pack', id: 'combo', amount: 1, icon: '▣', title: 'Pack Combo' },
+    { level: 17, type: 'coins', amount: 200, icon: '◆', title: 'PulseCoins' },
+    { level: 18, type: 'booster', id: 'pulse-core', amount: 2, icon: '⚡', title: 'Double Noyau Pulse' },
+    { level: 19, type: 'coins', amount: 220, icon: '◆', title: 'Réserve avancée' },
+    { level: 20, type: 'effect', id: 'confetti', icon: '✧', title: 'Effet Confettis', milestone: true },
+    { level: 21, type: 'coins', amount: 240, icon: '◆', title: 'PulseCoins' },
+    { level: 22, type: 'booster', id: 'reroll', amount: 2, icon: '⟳', title: 'Double Recomposition' },
+    { level: 23, type: 'pack', id: 'starter', amount: 1, icon: '▣', title: 'Pack de départ' },
+    { level: 24, type: 'coins', amount: 260, icon: '◆', title: 'Réserve architecte' },
+    { level: 25, type: 'board', id: 'nebula', icon: '▦', title: 'Plateau Nébuleuse', milestone: true },
+    { level: 26, type: 'booster', id: 'hammer', amount: 2, icon: '⌁', title: 'Marteaux experts' },
+    { level: 27, type: 'coins', amount: 280, icon: '◆', title: 'PulseCoins' },
+    { level: 28, type: 'effect', id: 'spark', icon: '⁕', title: 'Effet Étincelles' },
+    { level: 29, type: 'coins', amount: 300, icon: '◆', title: 'Grande réserve' },
+    { level: 30, type: 'skin', id: 'violet', icon: '✦', title: 'Skin Ultraviolet', milestone: true }
+  ];
+
   const DEFAULT_STATS = { games: 0, totalScore: 0, totalLines: 0, bestCombo: 0, piecesPlaced: 0, pulseBursts: 0, boostersUsed: 0 };
   const defaultSave = () => ({
     best: 0,
@@ -69,6 +123,9 @@
     inventory: { hammer: 2, reroll: 1, 'pulse-core': 0 },
     stats: { ...DEFAULT_STATS },
     sound: true,
+    music: false,
+    volume: .72,
+    progressionClaims: [],
     missionDate: '',
     missions: []
   });
@@ -78,9 +135,11 @@
     screen: 'home',
     board: createEmptyBoard(),
     queue: [],
+    turn: 0,
     score: 0,
     lines: 0,
     combo: 0,
+    recordAnnounced: false,
     bestComboInGame: 0,
     charge: 0,
     pulseBursts: 0,
@@ -93,6 +152,8 @@
     paused: false,
     shopTab: 'skins',
     toastTimer: null,
+    clearFeedbackTimer: null,
+    highScoreTimer: null,
     suppressPieceClick: false
   };
 
@@ -105,6 +166,15 @@
     result.equipped = { ...base.equipped, ...((parsed && parsed.equipped) || {}) };
     result.inventory = { ...base.inventory, ...((parsed && parsed.inventory) || {}) };
     result.stats = { ...DEFAULT_STATS, ...((parsed && parsed.stats) || {}) };
+    result.sound = result.sound !== false;
+    result.music = result.music === true;
+    result.volume = clamp(Number(result.volume ?? .72), 0, 1);
+    result.progressionClaims = Array.isArray(result.progressionClaims)
+      ? [...new Set(result.progressionClaims.map(Number).filter(level => Number.isInteger(level) && level > 0))]
+      : [];
+    Object.keys(base.unlocked).forEach(category => {
+      if (!Array.isArray(result.unlocked[category])) result.unlocked[category] = [...base.unlocked[category]];
+    });
     ensureMissionsForToday(result);
     return result;
   }
@@ -138,19 +208,22 @@
   function cloneShape(shape) { return shape.map(([r, c]) => [r, c]); }
   function makePiece(def) {
     const cells = cloneShape(def.cells);
-    return { id: def.id, cells, rows: Math.max(...cells.map(c => c[0])) + 1, cols: Math.max(...cells.map(c => c[1])) + 1 };
+    return { id: def.id, color: getPieceColor(def.id), cells, rows: Math.max(...cells.map(c => c[0])) + 1, cols: Math.max(...cells.map(c => c[1])) + 1 };
   }
 
   function occupiedCount() { return state.board.flat().filter(Boolean).length; }
 
   function chooseShapeDefinition() {
     const density = occupiedCount() / (GRID * GRID);
+    const opening = state.turn < 6 && occupiedCount() < 24;
     const weights = SHAPE_LIBRARY.map(def => {
       const size = def.cells.length;
       let weight = 1;
       if (density > .5 && size <= 3) weight += 2.6;
       if (density > .68 && size <= 2) weight += 2.5;
-      if (density < .22 && size >= 4) weight += .8;
+      if (!opening && density < .22 && size >= 4) weight += .8;
+      if (opening && size <= 4) weight += 2.2;
+      if (opening && size >= 5) weight *= .25;
       if (size === 5 && density > .4) weight -= .35;
       return Math.max(.15, weight);
     });
@@ -158,6 +231,12 @@
     let roll = Math.random() * total;
     for (let i = 0; i < SHAPE_LIBRARY.length; i++) { roll -= weights[i]; if (roll <= 0) return SHAPE_LIBRARY[i]; }
     return SHAPE_LIBRARY[0];
+  }
+
+  function getStarterQueue() {
+    const wave = state.turn < 3 ? STARTER_WAVES[0] : state.turn < 6 ? STARTER_WAVES[1] : null;
+    if (!wave) return null;
+    return wave.map(id => makePiece(SHAPE_LIBRARY.find(def => def.id === id)));
   }
 
   function canPlace(piece, row, col) {
@@ -182,7 +261,8 @@
   }
 
   function generateQueue() {
-    const pieces = Array.from({ length: QUEUE_SIZE }, generatePiece);
+    const starterQueue = getStarterQueue();
+    const pieces = starterQueue || Array.from({ length: QUEUE_SIZE }, generatePiece);
     if (!pieces.some(canAnyPlace) && occupiedCount() < GRID * GRID) {
       pieces[0] = makePiece(SHAPE_LIBRARY[0]);
     }
@@ -210,6 +290,7 @@
     renderShop();
     renderCollection();
     renderStats();
+    renderProgression();
     bindEvents();
     setTimeout(() => $('#boot-screen')?.classList.add('done'), 650);
   }
@@ -223,18 +304,34 @@
     window.addEventListener('blur', cancelDrag);
     document.addEventListener('visibilitychange', () => { if (document.hidden) cancelDrag(); });
     $('#modal-backdrop').addEventListener('click', event => { if (event.target.id === 'modal-backdrop') closeModal(); });
+    $('#volume-control')?.addEventListener('input', event => {
+      profile.volume = clamp(Number(event.target.value) / 100, 0, 1);
+      saveProfile();
+      const label = $('#volume-label'); if (label) label.textContent = `${Math.round(profile.volume * 100)}%`;
+    });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
   }
 
   function handleClick(event) {
+    const clickedButton = event.target.closest('button');
+    if (clickedButton) retriggerClass(clickedButton, 'button-press');
     const routeButton = event.target.closest('[data-route]');
     if (routeButton) {
+      playSfx('button'); vibrate(7);
       const route = routeButton.dataset.route;
       if (route === 'home' && state.gameActive && state.screen === 'game') {
         openPauseModal();
       } else {
         showScreen(route);
       }
+      return;
+    }
+
+    const shopTabButton = event.target.closest('[data-shop-tab]');
+    if (shopTabButton) {
+      playSfx('button'); vibrate(6);
+      state.shopTab = shopTabButton.dataset.shopTab;
+      renderShop();
       return;
     }
 
@@ -256,6 +353,7 @@
 
     const action = event.target.closest('[data-action]')?.dataset.action;
     if (!action) return;
+    if (['pause', 'resume', 'go-home', 'close-modal', 'hint', 'progression', 'progression-current'].includes(action)) { playSfx('button'); vibrate(7); }
     switch (action) {
       case 'play': startNewGame(); break;
       case 'game-home': state.gameActive ? openPauseModal() : showScreen('home'); break;
@@ -265,8 +363,12 @@
       case 'go-home': closeModal(); state.gameActive = false; state.paused = false; showScreen('home'); break;
       case 'close-modal': closeModal(); break;
       case 'hint': giveHint(); break;
+      case 'progression': closeModal(); state.gameActive = false; showScreen('progression'); break;
+      case 'progression-current': scrollProgressionToCurrent(true); break;
+      case 'claim-progression': claimProgressionReward(event.target.closest('[data-level]')?.dataset.level); break;
       case 'use-booster': useBooster(event.target.closest('[data-booster-id]')?.dataset.boosterId); break;
       case 'toggle-sound': toggleSound(); break;
+      case 'toggle-music': toggleMusic(); break;
       case 'claim-mission': claimMission(event.target.closest('[data-mission-id]')?.dataset.missionId); break;
       case 'buy-item': buyItem(event.target.closest('[data-item]')?.dataset.category, event.target.closest('[data-item]')?.dataset.item); break;
       case 'buy-booster': buyBooster(event.target.closest('[data-booster-id]')?.dataset.boosterId); break;
@@ -347,6 +449,7 @@
     state.selectedPiece = index;
     $$('.piece-item.selected').forEach(pieceItem => pieceItem.classList.remove('selected'));
     item.classList.add('selected');
+    playSfx('select'); vibrate(9);
     clearPreview();
     $('#game-message').textContent = 'Touche la grille pour déposer ce fragment.';
 
@@ -478,6 +581,7 @@
     clearPreview();
     if (state.selectedPiece !== null) {
       const piece = state.queue[state.selectedPiece];
+      playSfx('select'); vibrate(9);
       $('#game-message').textContent = 'Touche la grille pour déposer ce fragment.';
       if (!canAnyPlace(piece)) showToast('Ce fragment ne trouve plus sa place.');
     } else $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.';
@@ -514,9 +618,13 @@
 
   function createPieceVisual(piece, ghost = false) {
     const shape = document.createElement('div');
+    const color = piece.color || getPieceColor(piece.id);
     shape.className = 'piece-shape' + (ghost ? ' ghost-shape' : '');
     shape.style.setProperty('--piece-cols', piece.cols);
     shape.style.setProperty('--piece-rows', piece.rows);
+    shape.style.setProperty('--piece-primary', color.primary);
+    shape.style.setProperty('--piece-secondary', color.secondary);
+    shape.style.setProperty('--piece-soft', color.soft);
     for (let r = 0; r < piece.rows; r++) for (let c = 0; c < piece.cols; c++) {
       const mini = document.createElement('i');
       mini.className = 'mini-cell' + (piece.cells.some(([pr, pc]) => pr === r && pc === c) ? '' : ' empty');
@@ -540,10 +648,17 @@
     const colDensity = Array.from({ length: GRID }, (_, c) => state.board.filter(row => row[c]).length);
     [...board.children].forEach((cell, index) => {
       const r = Math.floor(index / GRID); const c = index % GRID;
-      const occupied = Boolean(state.board[r][c]);
+      const boardPiece = state.board[r][c];
+      const occupied = Boolean(boardPiece);
       const almostFull = rowDensity[r] >= 6 || colDensity[c] >= 6;
       cell.className = `cell${occupied ? ' filled' : ''}${almostFull ? ' near-line' : ''}`;
       cell.removeAttribute('style');
+      if (occupied) {
+        const color = boardPiece.color || getPieceColor(boardPiece.piece);
+        cell.style.setProperty('--piece-primary', color.primary);
+        cell.style.setProperty('--piece-secondary', color.secondary);
+        cell.style.setProperty('--piece-soft', color.soft);
+      }
     });
   }
 
@@ -655,7 +770,7 @@
       renderTray();
       renderBoosters();
       $('#game-message').textContent = 'Marteau actif : touche un carré occupé à retirer.';
-      vibrate(16); playTone(720, .06);
+      playSfx('booster'); vibrate(18);
       return;
     }
 
@@ -672,14 +787,14 @@
       triggerBoardImpact('place');
       spawnScorePopup('RECOMPO !', 'combo', [], true);
       showToast('Nouveaux fragments en approche.');
-      vibrate([15, 12, 20]); playTone(820, .1);
+      playSfx('booster'); vibrate([15, 12, 24]);
     } else if (id === 'pulse-core') {
       state.charge = 100;
       renderHud(); renderBoosters();
       triggerBoardImpact('pulse');
       spawnScorePopup('CHARGE !', 'pulse', [], true);
       showToast('La prochaine ligne déclenchera une Pulse Burst.');
-      vibrate([18, 15, 30]); playTone(980, .13);
+      playSfx('booster'); vibrate([18, 15, 32]);
     }
     saveProfile();
   }
@@ -701,15 +816,21 @@
     spawnScorePopup('LIBÉRÉ', 'clear', [[row, col]], true);
     $('#game-message').textContent = 'Un espace vient de se libérer. À toi de jouer.';
     showToast('Carré retiré.');
-    vibrate([18, 14, 26]); playTone(680, .1);
+    playSfx('booster'); vibrate([18, 14, 28]);
     saveProfile();
   }
 
   function startNewGame() {
     cancelDrag();
     closeModal();
-    state.screen = 'game'; state.board = createEmptyBoard(); state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.gameActive = true; state.paused = false;
-    showScreen('game'); renderBoard(); renderTray(); renderHud(); renderBoosters(); animateTrayArrival(); animateBoosterArrival(); $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.'; vibrate(10); playTone(440, .05);
+    clearTimeout(state.highScoreTimer);
+    clearTimeout(state.clearFeedbackTimer);
+    $('#high-score-feedback')?.classList.remove('show');
+    $('#high-score-feedback')?.setAttribute('aria-hidden', 'true');
+    $('#clear-feedback')?.classList.remove('show');
+    $('#clear-feedback')?.setAttribute('aria-hidden', 'true');
+    state.screen = 'game'; state.board = createEmptyBoard(); state.turn = 0; state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.recordAnnounced = false; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.gameActive = true; state.paused = false;
+    showScreen('game'); renderBoard(); renderTray(); renderHud(); renderBoosters(); animateTrayArrival(); animateBoosterArrival(); $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.'; vibrate(8); playSfx('start');
   }
 
   function showScreen(route) {
@@ -724,6 +845,10 @@
     if (route === 'collection') renderCollection();
     if (route === 'missions') renderMissions();
     if (route === 'stats') renderStats();
+    if (route === 'progression') {
+      renderProgression();
+      requestAnimationFrame(() => scrollProgressionToCurrent(false));
+    }
   }
 
   function clearCompletedLines() {
@@ -754,17 +879,17 @@
   function placePiece(index, row, col) {
     if (state.resolving || !state.gameActive) return;
     const piece = state.queue[index]; if (!piece || !canPlace(piece, row, col)) return;
-    state.resolving = true; state.selectedPiece = null;
+    state.resolving = true; state.selectedPiece = null; state.turn += 1;
     const scoreBeforeMove = state.score;
     const placedCells = piece.cells.map(([dr, dc]) => [row + dr, col + dc]);
     const placementScore = calculatePlacementScore(piece);
-    piece.cells.forEach(([dr, dc]) => { state.board[row + dr][col + dc] = { piece: piece.id }; });
+    piece.cells.forEach(([dr, dc]) => { state.board[row + dr][col + dc] = { piece: piece.id, color: piece.color || getPieceColor(piece.id) }; });
     profile.stats.piecesPlaced += 1; updateMission('pieces', 1);
     state.score += placementScore;
     state.queue[index] = null; renderBoard(); renderTray(); renderHud(); animatePlacedCells(placedCells);
     spawnScorePopup(`+${formatNumber(placementScore)}`, 'place', placedCells);
     triggerBoardImpact('place');
-    vibrate(18); playTone(580, .06);
+    playSfx('place'); vibrate(10);
     const completed = clearCompletedLines();
     if (completed.cells.length) {
       const clearedLines = completed.rows.length + completed.cols.length;
@@ -784,6 +909,7 @@
       markCellsClearing(completed.cells);
       triggerClearEffect(completed.cells, pulseReady);
       triggerBoardImpact(pulseReady ? 'pulse' : 'clear');
+      showClearFeedback(clearedLines);
       spawnScorePopup(`+${formatNumber(clearScore)}`, pulseReady ? 'pulse' : 'clear', completed.cells);
       if (state.combo > 1) {
         spawnScorePopup(`COMBO ×${state.combo}`, 'combo', completed.cells, true);
@@ -792,15 +918,21 @@
       }
       $('#game-message').textContent = pulseReady ? 'PULSE BURST ! La grille vient de surcharger.' : `${clearedLines} ligne${clearedLines > 1 ? 's' : ''} dissoute${clearedLines > 1 ? 's' : ''} !`;
       showToast(pulseReady ? `PULSE BURST  ·  +${formatNumber(clearScore)} pts` : state.combo > 1 ? `Combo ×${state.combo}  ·  +${formatNumber(clearScore)} pts` : `Impulsion parfaite  ·  +${formatNumber(clearScore)} pts`);
-      vibrate(pulseReady ? [25, 18, 50] : clearedLines > 1 ? [18, 14, 30] : 35); playTone(pulseReady ? 1040 : 760 + state.combo * 35, pulseReady ? .2 : .12);
+      const clearLevel = pulseReady || clearedLines >= 3 ? 3 : clearedLines >= 2 ? 2 : 1;
+      playSfx(clearLevel >= 3 ? 'multi-clear' : clearedLines >= 2 ? 'multi-clear' : 'clear', clearLevel);
+      if (state.combo > 1) playSfx('combo', Math.min(4, state.combo));
+      vibrate(clearLevel >= 3 ? [24, 12, 42] : clearLevel === 2 ? [18, 10, 30] : 14);
       setTimeout(() => finishClear(completed), pulseReady ? 440 : 300);
     } else {
       state.combo = 0; updateMission('score', state.score); setTimeout(finishTurn, 110);
     }
-    if (profile.best > 0 && scoreBeforeMove < profile.best && state.score >= profile.best) {
-      showToast('RECORD EN VUE ! Continue comme ça.');
-      spawnScorePopup('RECORD !', 'pulse', placedCells, true);
-      playTone(980, .1);
+    if (profile.best > 0 && !state.recordAnnounced && scoreBeforeMove <= profile.best && state.score > profile.best) {
+      state.recordAnnounced = true;
+      showHighScoreFeedback(state.score);
+      showToast('NEW HIGH SCORE ! Continue comme ça.');
+      spawnScorePopup('NEW HIGH SCORE', 'pulse', placedCells, true);
+      playSfx('record');
+      vibrate([28, 14, 52]);
     }
     renderHud(); saveProfile();
   }
@@ -841,7 +973,13 @@
     updateMission('games', 1); updateMission('score', state.score);
     const levels = addXp(xpEarned);
     saveProfile(); renderHome(); renderMissions(); renderStats(); renderHud();
+    playSfx(isNewRecord && !state.recordAnnounced ? 'record' : 'gameOver');
+    vibrate(isNewRecord && !state.recordAnnounced ? [28, 14, 52] : [18, 12, 28]);
     openEndModal(reward, xpEarned, levels, levelBefore, isNewRecord, previousBest);
+    showRewardPopup(`+${reward} ◆`, 'coins');
+    setTimeout(() => { showRewardPopup(`+${xpEarned} XP`, 'xp'); playSfx('xp'); }, 90);
+    setTimeout(() => playSfx('coins'), 210);
+    if (levels) setTimeout(() => playSfx('unlock'), 340);
   }
 
   function addXp(amount) {
@@ -850,6 +988,117 @@
     return levels;
   }
   function xpForNextLevel(level) { return 400 + (level - 1) * 150; }
+
+  function getProgressionReward(level) {
+    const explicit = PROGRESSION_REWARDS.find(reward => reward.level === level);
+    if (explicit) return { ...explicit };
+    if (level % 10 === 0) return { level, type: 'pack', id: 'overdrive', amount: 1, icon: '◆', title: 'Pack Overdrive', milestone: true };
+    if (level % 5 === 0) return { level, type: 'coins', amount: 320 + level * 8, icon: '◆', title: 'Grande réserve', milestone: true };
+    return { level, type: 'coins', amount: 100 + level * 8, icon: '◆', title: 'PulseCoins' };
+  }
+
+  function isProgressionClaimed(level) { return profile.progressionClaims.includes(level); }
+
+  function progressionRewardLabel(reward) {
+    if (reward.type === 'coins') return `+${formatNumber(reward.amount)} PulseCoins`;
+    if (reward.type === 'booster') {
+      const item = CATALOG.boosters.find(entry => entry.id === reward.id);
+      return `${reward.amount > 1 ? `${reward.amount}× ` : ''}${item?.name || 'Booster'}`;
+    }
+    if (reward.type === 'pack') return `${reward.amount > 1 ? `${reward.amount}× ` : ''}${CATALOG.packs.find(pack => pack.id === reward.id)?.name || 'Pack'}`;
+    if (reward.type === 'skin') return `Skin ${findCatalog('skins', reward.id).name}`;
+    if (reward.type === 'board') return `Plateau ${findCatalog('boards', reward.id).name}`;
+    if (reward.type === 'effect') return `Effet ${findCatalog('effects', reward.id).name}`;
+    return reward.title || 'Récompense';
+  }
+
+  function progressionRewardDetail(reward) {
+    if (reward.type === 'coins') return `+${formatNumber(reward.amount)} ◆`;
+    if (reward.type === 'booster') return `${reward.amount > 1 ? `${reward.amount} × ` : ''}${CATALOG.boosters.find(item => item.id === reward.id)?.name || 'Booster'}`;
+    if (reward.type === 'pack') return `${reward.amount > 1 ? `${reward.amount} × ` : ''}${CATALOG.packs.find(pack => pack.id === reward.id)?.name || 'Pack'}`;
+    return progressionRewardLabel(reward);
+  }
+
+  function getNextProgressionReward() {
+    for (let level = 1; level <= profile.level; level++) {
+      if (!isProgressionClaimed(level)) return getProgressionReward(level);
+    }
+    return getProgressionReward(profile.level + 1);
+  }
+
+  function availableProgressionRewards() {
+    let count = 0;
+    for (let level = 1; level <= profile.level; level++) if (!isProgressionClaimed(level)) count++;
+    return count;
+  }
+
+  function grantProgressionReward(reward) {
+    if (reward.type === 'coins') {
+      profile.coins += reward.amount;
+      return { popup: `+${formatNumber(reward.amount)} ◆`, popupType: 'coins' };
+    }
+    if (reward.type === 'booster') {
+      profile.inventory[reward.id] = (profile.inventory[reward.id] || 0) + reward.amount;
+      return { popup: `+${reward.amount} ${CATALOG.boosters.find(item => item.id === reward.id)?.name || 'booster'}`, popupType: 'special' };
+    }
+    if (reward.type === 'pack') {
+      const pack = CATALOG.packs.find(item => item.id === reward.id);
+      if (pack) for (let index = 0; index < reward.amount; index++) Object.entries(pack.contents).forEach(([id, amount]) => { profile.inventory[id] = (profile.inventory[id] || 0) + amount; });
+      return { popup: `${pack?.name || 'Pack'} obtenu`, popupType: 'special' };
+    }
+    const category = reward.type === 'skin' ? 'skins' : reward.type === 'board' ? 'boards' : 'effects';
+    const alreadyUnlocked = profile.unlocked[category].includes(reward.id);
+    if (!alreadyUnlocked) {
+      profile.unlocked[category].push(reward.id);
+      return { popup: `${progressionRewardLabel(reward)} débloqué`, popupType: 'special' };
+    }
+    const fallbackCoins = reward.duplicateCoins || 75;
+    profile.coins += fallbackCoins;
+    return { popup: `Déjà obtenu · +${fallbackCoins} ◆`, popupType: 'coins' };
+  }
+
+  function claimProgressionReward(level) {
+    const rewardLevel = Number(level);
+    if (!Number.isInteger(rewardLevel) || rewardLevel < 1 || rewardLevel > profile.level || isProgressionClaimed(rewardLevel)) return;
+    const reward = getProgressionReward(rewardLevel);
+    const result = grantProgressionReward(reward);
+    profile.progressionClaims.push(rewardLevel);
+    profile.progressionClaims.sort((a, b) => a - b);
+    saveProfile();
+    renderHome(); renderProgression(); renderShop(); renderCollection(); renderStats();
+    showRewardPopup(result.popup, result.popupType);
+    showToast(`Récompense du niveau ${rewardLevel} récupérée !`);
+    playSfx(reward.milestone ? 'unlock' : 'coins');
+    vibrate(reward.milestone ? [18, 10, 28] : 14);
+  }
+
+  function renderProgression() {
+    const target = $('#progression-content');
+    if (!target) return;
+    const nextXp = xpForNextLevel(profile.level);
+    const xpRatio = clamp(profile.xp / nextXp * 100, 0, 100);
+    const nextReward = getNextProgressionReward();
+    const available = availableProgressionRewards();
+    const maxLevel = Math.max(PROGRESSION_REWARDS.length, profile.level + 5);
+    const nodes = Array.from({ length: maxLevel }, (_, index) => {
+      const level = index + 1;
+      const reward = getProgressionReward(level);
+      const claimed = isProgressionClaimed(level);
+      const unlocked = level <= profile.level;
+      const current = level === profile.level;
+      const milestone = Boolean(reward.milestone || level % 5 === 0);
+      const statusClass = claimed ? 'is-claimed' : unlocked ? 'is-available' : 'is-locked';
+      const stateLabel = claimed ? '✓ RÉCUPÉRÉE' : current ? 'NIVEAU ACTUEL' : unlocked ? 'RÉCOMPENSE DISPONIBLE' : 'VERROUILLÉ';
+      const action = claimed ? '<span class="progression-claimed">✓ RÉCUPÉRÉE</span>' : unlocked ? `<button class="progression-claim" data-action="claim-progression" data-level="${level}">RÉCUPÉRER</button>` : `<span class="progression-locked">🔒 À venir</span>`;
+      return `<article class="progression-node ${statusClass}${current ? ' is-current' : ''}${milestone ? ' is-milestone' : ''}" data-progression-level="${level}"><div class="progression-rail"><span class="progression-dot">${claimed ? '✓' : milestone ? '★' : level}</span></div><div class="progression-card"><div class="progression-card-top"><span class="progression-level">NIVEAU ${level}</span><span class="progression-state">${stateLabel}</span></div><div class="progression-reward"><span class="progression-reward-icon">${reward.icon || '◆'}</span><div><strong>${progressionRewardLabel(reward)}</strong><small>${reward.title || progressionRewardDetail(reward)}${milestone ? ' · MILESTONE' : ''}</small></div></div>${action}</div></article>`;
+    }).join('');
+    target.innerHTML = `<article class="progression-overview"><div class="progression-overview-top"><div><span class="eyebrow accent">ROUTE DE PROGRESSION</span><h2>Niveau ${profile.level}</h2><p>${formatNumber(profile.xp)} / ${formatNumber(nextXp)} XP avant le niveau ${profile.level + 1}</p></div><button class="progression-center" data-action="progression-current">MON NIVEAU</button></div><div class="progression-xp"><span style="width:${xpRatio}%"></span></div><div class="progression-next"><span>${available ? `${available} récompense${available > 1 ? 's' : ''} disponible${available > 1 ? 's' : ''}` : 'PROCHAINE RÉCOMPENSE'}</span><strong>NIVEAU ${nextReward.level} · ${progressionRewardDetail(nextReward)}</strong></div></article><div class="progression-track">${nodes}</div>`;
+  }
+
+  function scrollProgressionToCurrent(smooth = false) {
+    const level = Math.min(profile.level, Math.max(PROGRESSION_REWARDS.length, profile.level));
+    document.querySelector(`[data-progression-level="${level}"]`)?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+  }
 
   function updateMission(type, amount) {
     ensureMissionsForToday(profile);
@@ -861,13 +1110,24 @@
 
   function claimMission(id) {
     const mission = profile.missions.find(item => item.id === id); if (!mission || mission.claimed || mission.progress < mission.target) return;
-    mission.claimed = true; profile.coins += mission.reward; saveProfile(); renderHome(); renderMissions(); renderShop(); animateShopItem('data-mission-id', id, 'mission-claim'); showToast(`+${mission.reward} PulseCoins · mission validée`); playTone(880, .12); vibrate(25);
+    mission.claimed = true; profile.coins += mission.reward; saveProfile(); renderHome(); renderMissions(); renderShop(); animateShopItem('data-mission-id', id, 'mission-claim'); showToast(`+${mission.reward} PulseCoins · mission validée`); showRewardPopup(`+${mission.reward} ◆`, 'coins'); playSfx('coins'); vibrate(24);
   }
 
   function renderHome() {
     const next = xpForNextLevel(profile.level); const ratio = clamp(profile.xp / next * 100, 0, 100);
     $('#home-level').textContent = profile.level; $('#home-coins').textContent = formatNumber(profile.coins); $('#home-best').textContent = formatNumber(profile.best); $('#home-xp-label').textContent = `${formatNumber(profile.xp)} / ${formatNumber(next)} XP`; $('#home-xp-fill').style.width = `${ratio}%`;
     $('#sound-icon').textContent = profile.sound ? '◖' : '◌';
+    $('#music-icon').textContent = profile.music ? '♫' : '·';
+    $('#sound-label').textContent = profile.sound ? 'ON' : 'OFF';
+    $('#music-label').textContent = profile.music ? 'ON' : 'OFF';
+    $$('[data-action="toggle-sound"]').forEach(button => button.setAttribute('aria-pressed', String(profile.sound)));
+    $$('[data-action="toggle-music"]').forEach(button => button.setAttribute('aria-pressed', String(profile.music)));
+    $('#volume-control').value = Math.round(profile.volume * 100);
+    $('#volume-label').textContent = `${Math.round(profile.volume * 100)}%`;
+    const progressionAvailable = availableProgressionRewards();
+    const progressionNext = getNextProgressionReward();
+    const progressionLabel = progressionAvailable ? `${progressionAvailable} récompense${progressionAvailable > 1 ? 's' : ''} à récupérer` : `Niv. ${progressionNext.level} · ${progressionRewardDetail(progressionNext)}`;
+    $('#home-progression-next').textContent = progressionLabel;
     const available = profile.missions.filter(m => m.progress >= m.target && !m.claimed).length; $('#home-mission-count').textContent = available ? `${available} à réclamer` : 'Défis du jour';
     const mission = profile.missions.find(m => !m.claimed) || profile.missions[0];
     if (mission) { $('#home-mission-title').textContent = mission.title; $('#home-mission-fill').style.width = `${clamp(mission.progress / mission.target * 100, 0, 100)}%`; }
@@ -924,7 +1184,7 @@
   function buyItem(category, id) {
     if (!category || !id) return; const item = findCatalog(category, id); if (isUnlocked(category, id)) { equipItem(category, id); return; }
     if (profile.coins < item.price) { showToast('Pas assez de PulseCoins pour cet élément.'); vibrate(20); return; }
-    profile.coins -= item.price; profile.unlocked[category].push(id); saveProfile(); renderShop(); renderCollection(); renderHome(); animateShopItem('data-item', id); showToast(`${item.name} débloqué !`); playTone(700, .1); vibrate(22);
+    profile.coins -= item.price; profile.unlocked[category].push(id); saveProfile(); renderShop(); renderCollection(); renderHome(); animateShopItem('data-item', id); showToast(`${item.name} débloqué !`); playSfx('unlock'); vibrate(22);
   }
 
   function buyBooster(id) {
@@ -939,7 +1199,7 @@
     profile.inventory[id] = (profile.inventory[id] || 0) + 1;
     saveProfile(); renderShop(); renderHome(); renderBoosters(); animateShopItem('data-booster-id', id);
     showToast(`${booster.name} ajouté à l'inventaire.`);
-    playTone(720, .1); vibrate(22);
+    playSfx('purchase'); vibrate(22);
   }
 
   function buyPack(id) {
@@ -956,12 +1216,12 @@
     });
     saveProfile(); renderShop(); renderHome(); renderBoosters(); animateShopItem('data-pack-id', id);
     showToast(`${pack.name} ouvert : bonus ajoutés !`);
-    playTone(860, .12); vibrate([18, 14, 30]);
+    playSfx('purchase'); vibrate([18, 14, 30]);
   }
 
   function equipItem(category, id) {
     if (!category || !id || !isUnlocked(category, id)) return;
-    const key = category.slice(0, -1); profile.equipped[key] = id; applyTheme(); saveProfile(); renderShop(); renderCollection(); animateShopItem('data-item', id, 'equip-pop'); showToast(`${findCatalog(category, id).name} équipé`); playTone(600, .07);
+    const key = category.slice(0, -1); profile.equipped[key] = id; applyTheme(); saveProfile(); renderShop(); renderCollection(); animateShopItem('data-item', id, 'equip-pop'); showToast(`${findCatalog(category, id).name} équipé`); playSfx('unlock');
   }
 
   function renderMissions() {
@@ -997,12 +1257,12 @@
   }
 
   function openEndModal(reward, xpEarned, levels, levelBefore, isNewRecord, previousBest) {
-    const levelText = levels ? `<div class="level-up">NIVEAU ${levelBefore + levels} atteint · bonus de progression ajouté</div>` : '';
-    const recordKicker = isNewRecord ? 'NOUVEAU RECORD' : 'LA GRILLE S\'EST ÉTEINTE';
+    const levelText = levels ? `<div class="level-up"><strong>LEVEL UP!</strong><span>NIVEAU ${levelBefore + levels} atteint · ${levels > 1 ? `${levels} récompenses` : 'une récompense'} disponible${levels > 1 ? 's' : ''}</span><button data-action="progression">VOIR LA RÉCOMPENSE</button></div>` : '';
+    const recordKicker = isNewRecord ? 'NEW HIGH SCORE' : 'PARTIE TERMINÉE';
     const recordTitle = isNewRecord ? 'Tu viens de monter la barre.' : 'Bien joué.';
+    const recordBanner = isNewRecord ? `<div class="end-record-banner"><span>NEW HIGH SCORE</span><strong>${formatNumber(state.score)}</strong></div>` : '';
     const recordMessage = isNewRecord ? 'Cette partie devient ton nouveau repère. Encore une pour voir jusqu\'où tu peux pousser la grille.' : previousBest > 0 ? `Il te manquait ${formatNumber(Math.max(0, previousBest - state.score))} points pour battre ton record.` : 'Chaque partie construit ton premier record. Le prochain coup peut déjà tout changer.';
-    openModal(`<span class="modal-kicker ${isNewRecord ? 'record-kicker' : ''}">${recordKicker}</span><h2>${recordTitle}</h2><p>${recordMessage}</p><div class="result-score ${isNewRecord ? 'record-score' : ''}"><span>SCORE FINAL</span><strong>${formatNumber(state.score)}</strong></div><div class="result-stats"><div class="result-stat"><strong>${formatNumber(state.lines)}</strong><span>lignes</span></div><div class="result-stat"><strong>×${formatNumber(Math.max(profile.stats.bestCombo, state.bestComboInGame))}</strong><span>combo max</span></div><div class="result-stat"><strong>${formatNumber(state.pulseBursts)}</strong><span>bursts</span></div><div class="result-stat"><strong>${formatNumber(profile.best)}</strong><span>meilleur</span></div></div><div class="reward-row"><div>◆ ${reward}<span>PulseCoins</span></div><div>✦ ${xpEarned}<span>XP gagnés</span></div></div>${levelText}<div class="modal-actions"><button class="secondary" data-action="game-home">ACCUEIL</button><button class="primary" data-action="restart">REJOUER</button></div>`);
-    if (isNewRecord) { playTone(1180, .14); vibrate([22, 18, 35]); }
+    openModal(`${recordBanner}<span class="modal-kicker ${isNewRecord ? 'record-kicker' : ''}">${recordKicker}</span><h2>${recordTitle}</h2><p>${recordMessage}</p><div class="result-score ${isNewRecord ? 'record-score' : ''}"><span>SCORE</span><strong>${formatNumber(state.score)}</strong></div><div class="result-stats"><div class="result-stat"><strong>${formatNumber(state.lines)}</strong><span>lignes supprimées</span></div><div class="result-stat"><strong>×${formatNumber(Math.max(profile.stats.bestCombo, state.bestComboInGame))}</strong><span>meilleur combo</span></div><div class="result-stat"><strong>${formatNumber(state.turn)}</strong><span>pièces posées</span></div><div class="result-stat"><strong>${formatNumber(profile.best)}</strong><span>meilleur score</span></div></div><div class="reward-row"><div>◆ ${reward}<span>PulseCoins</span></div><div>✦ ${xpEarned}<span>XP gagnés</span></div></div>${levelText}<div class="modal-actions"><button class="secondary" data-action="go-home">ACCUEIL</button><button class="primary" data-action="restart">REJOUER</button></div>`);
   }
 
   function openModal(content) { $('#modal-card').innerHTML = content; $('#modal-backdrop').classList.add('open'); $('#modal-backdrop').setAttribute('aria-hidden', 'false'); }
@@ -1024,6 +1284,88 @@
     if (pulseBurst || effect === 'spark') layer.animate([{ opacity: .35 }, { opacity: 1 }, { opacity: .35 }], { duration: pulseBurst ? 440 : 320, iterations: 2 });
   }
 
+  function showClearFeedback(count) {
+    if (count < 2) return;
+    const panel = $('#clear-feedback');
+    const text = $('#clear-feedback-text');
+    const subtitle = $('#clear-feedback-subtitle');
+    if (!panel || !text || !subtitle) return;
+
+    const feedback = count >= 5
+      ? { word: 'UNSTOPPABLE!', className: 'feedback-unstoppable', level: 4, duration: 1150 }
+      : count === 4
+        ? { word: 'INCREDIBLE!', className: 'feedback-incredible', level: 3, duration: 1100 }
+        : count === 3
+          ? { word: 'AWESOME!', className: 'feedback-awesome', level: 2, duration: 1050 }
+          : { word: 'AMAZING!', className: 'feedback-amazing', level: 1, duration: 1000 };
+
+    clearTimeout(state.clearFeedbackTimer);
+    panel.className = `clear-feedback ${feedback.className}`;
+    panel.setAttribute('aria-hidden', 'false');
+    text.textContent = feedback.word;
+    subtitle.textContent = `${count} LIGNES / COLONNES ÉLIMINÉES`;
+    void panel.offsetWidth;
+    panel.classList.add('show');
+    spawnFeedbackParticles(feedback.level);
+    if (feedback.level >= 3) spawnFeedbackFlash();
+    speakClearFeedback(feedback.word, feedback.level);
+
+    state.clearFeedbackTimer = setTimeout(() => {
+      panel.classList.remove('show');
+      panel.setAttribute('aria-hidden', 'true');
+    }, feedback.duration);
+  }
+
+  function spawnFeedbackParticles(level) {
+    const layer = $('#fx-layer');
+    if (!layer) return;
+    const amount = level >= 4 ? 22 : level === 3 ? 16 : level === 2 ? 11 : 7;
+    for (let index = 0; index < amount; index++) {
+      const particle = document.createElement('i');
+      particle.className = `fx-particle feedback-particle${level >= 3 ? ' feedback-particle-big' : ''}${level >= 4 && index % 2 === 0 ? ' feedback-particle-hot' : ''}`;
+      particle.style.left = `${50 + (Math.random() - .5) * 20}%`;
+      particle.style.top = `${45 + (Math.random() - .5) * 14}%`;
+      particle.style.setProperty('--dx', `${(Math.random() - .5) * (level >= 4 ? 190 : 130)}px`);
+      particle.style.setProperty('--dy', `${-22 - Math.random() * (level >= 4 ? 120 : 82)}px`);
+      particle.style.animationDelay = `${index * (level >= 4 ? 12 : 17)}ms`;
+      layer.appendChild(particle);
+      setTimeout(() => particle.remove(), 950);
+    }
+  }
+
+  function spawnFeedbackFlash() {
+    const layer = $('#fx-layer');
+    if (!layer) return;
+    const flash = document.createElement('div');
+    flash.className = 'clear-feedback-flash';
+    layer.appendChild(flash);
+    requestAnimationFrame(() => flash.classList.add('show'));
+    setTimeout(() => flash.remove(), 280);
+  }
+
+  function speakClearFeedback(word, level) {
+    if (!profile.sound || profile.volume <= 0 || !('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') return;
+    try {
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.lang = 'en-US';
+      // Une diction légèrement ralentie mais avec un pitch plus haut donne
+      // une impression de cri de victoire plutôt que de voix monotone.
+      utterance.rate = level >= 4 ? .94 : level >= 3 ? .98 : 1.02;
+      utterance.pitch = level >= 4 ? 1.22 : level === 3 ? 1.17 : 1.12;
+      utterance.volume = profile.volume;
+      const voices = synth.getVoices();
+      const englishVoice = voices.find(voice => /^en(-|_)/i.test(voice.lang) && /Google|Samantha|Microsoft|Alex/i.test(voice.name))
+        || voices.find(voice => /^en(-|_)/i.test(voice.lang));
+      if (englishVoice) utterance.voice = englishVoice;
+      synth.cancel();
+      if (typeof synth.resume === 'function') synth.resume();
+      synth.speak(utterance);
+    } catch (_) {
+      // Le bandeau, les particules et les sons restent actifs si la synthèse vocale est bloquée.
+    }
+  }
+
   function spawnScorePopup(text, type = 'place', cells = [], raised = false) {
     const layer = $('#fx-layer');
     if (!layer) return;
@@ -1037,6 +1379,16 @@
     popup.style.top = `${clamp(((averageRow + .5) / GRID) * 100, 12, 88)}%`;
     layer.appendChild(popup);
     setTimeout(() => popup.remove(), type === 'pulse' ? 1150 : 900);
+  }
+
+  function showRewardPopup(text, type = 'coins') {
+    const layer = $('#reward-layer');
+    if (!layer) return;
+    const popup = document.createElement('span');
+    popup.className = `reward-pop reward-${type}`;
+    popup.textContent = text;
+    layer.appendChild(popup);
+    setTimeout(() => popup.remove(), 1100);
   }
 
   function retriggerClass(element, className) {
@@ -1055,15 +1407,103 @@
     setTimeout(() => boardWrap.classList.remove(`impact-${type}`), type === 'pulse' ? 520 : 300);
   }
 
+  function showHighScoreFeedback(score) {
+    const panel = $('#high-score-feedback');
+    const value = $('#high-score-value');
+    if (!panel || !value) return;
+    value.textContent = formatNumber(score);
+    panel.setAttribute('aria-hidden', 'false');
+    panel.classList.remove('show');
+    void panel.offsetWidth;
+    panel.classList.add('show');
+    spawnFeedbackParticles(4);
+    spawnFeedbackFlash();
+    clearTimeout(state.highScoreTimer);
+    state.highScoreTimer = setTimeout(() => {
+      panel.classList.remove('show');
+      panel.setAttribute('aria-hidden', 'true');
+    }, 1900);
+  }
+
   function showToast(message) {
     const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); clearTimeout(state.toastTimer); state.toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
   }
 
-  function toggleSound() { profile.sound = !profile.sound; saveProfile(); renderHome(); showToast(profile.sound ? 'Sons activés' : 'Sons coupés'); if (profile.sound) playTone(660, .07); }
-  function vibrate(duration) { if (navigator.vibrate) navigator.vibrate(duration); }
-  function playTone(frequency, duration) {
-    if (!profile.sound) return;
-    try { const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) return; const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.type = 'sine'; oscillator.frequency.value = frequency; gain.gain.setValueAtTime(.035, context.currentTime); gain.gain.exponentialRampToValueAtTime(.001, context.currentTime + duration); oscillator.connect(gain); gain.connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + duration); } catch (_) { /* audio facultatif */ }
+  function toggleSound() {
+    profile.sound = !profile.sound;
+    saveProfile(); renderHome();
+    showToast(profile.sound ? 'Effets sonores activés' : 'Effets sonores coupés');
+    if (profile.sound) playSfx('button');
+  }
+
+  function toggleMusic() {
+    profile.music = !profile.music;
+    saveProfile(); renderHome();
+    showToast(profile.music ? 'Musique activée · aucune piste configurée' : 'Musique coupée');
+    if (profile.sound) playSfx('button');
+  }
+
+  function vibrate(pattern) {
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(pattern);
+    } catch (_) { /* vibration facultative */ }
+  }
+
+  let audioContext = null;
+  function getAudioContext() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      if (!audioContext) audioContext = new AudioContext();
+      if (audioContext.state === 'suspended') {
+        const resume = audioContext.resume();
+        if (resume?.catch) resume.catch(() => {});
+      }
+      return audioContext;
+    } catch (_) { return null; }
+  }
+
+  function playTone(frequency, duration, options = {}) {
+    if (!profile.sound || profile.volume <= 0) return;
+    const context = getAudioContext();
+    if (!context) return;
+    try {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const now = context.currentTime;
+      const peak = Math.max(.001, (options.gain ?? .04) * profile.volume);
+      oscillator.type = options.type || 'sine';
+      oscillator.frequency.setValueAtTime(frequency, now);
+      if (options.to) oscillator.frequency.exponentialRampToValueAtTime(options.to, now + duration);
+      gain.gain.setValueAtTime(.001, now);
+      gain.gain.exponentialRampToValueAtTime(peak, now + Math.min(.012, duration * .2));
+      gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+      oscillator.connect(gain); gain.connect(context.destination);
+      oscillator.start(now); oscillator.stop(now + duration + .015);
+    } catch (_) { /* audio facultatif */ }
+  }
+
+  function playSfx(name, level = 1) {
+    if (!profile.sound || profile.volume <= 0) return;
+    const patterns = {
+      button: [[540, .045, 'triangle', .03]],
+      select: [[640, .045, 'sine', .034], [820, .055, 'triangle', .024]],
+      place: [[360, .045, 'triangle', .034], [520, .065, 'sine', .026]],
+      clear: [[520, .055, 'triangle', .04], [700, .08, 'sine', .03]],
+      'multi-clear': [[430, .055, 'triangle', .038], [620, .065, 'triangle', .04], [860, .11, 'sine', .034]],
+      combo: [[480 + level * 18, .05, 'triangle', .035], [680 + level * 35, .07, 'sine', .035], [900 + level * 55, .11, 'sine', .028]],
+      booster: [[390, .05, 'square', .025], [760, .1, 'triangle', .04]],
+      coins: [[620, .05, 'triangle', .03], [790, .06, 'triangle', .034], [1020, .11, 'sine', .03]],
+      xp: [[460, .05, 'sine', .027], [650, .06, 'triangle', .032], [860, .1, 'sine', .028]],
+      unlock: [[480, .06, 'triangle', .03], [720, .07, 'triangle', .035], [1060, .13, 'sine', .034]],
+      purchase: [[420, .05, 'square', .022], [600, .07, 'triangle', .03], [820, .11, 'sine', .03]],
+      record: [[560, .06, 'triangle', .03], [760, .07, 'triangle', .034], [1000, .09, 'sine', .038], [1320, .15, 'sine', .032]],
+      gameOver: [[420, .08, 'sine', .03], [330, .1, 'triangle', .03], [240, .15, 'sine', .028]],
+      start: [[440, .05, 'triangle', .025], [660, .09, 'sine', .032]]
+    };
+    (patterns[name] || patterns.button).forEach(([frequency, duration, type, gain], index) => {
+      setTimeout(() => playTone(frequency, duration, { type, gain }), index * 62);
+    });
   }
 
   init();

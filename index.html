@@ -25,7 +25,10 @@
               <h1 id="home-title">PULSE GRID</h1>
             </div>
           </div>
-          <button class="icon-button" data-action="toggle-sound" aria-label="Activer ou couper le son"><span id="sound-icon">◖</span></button>
+          <div class="topbar-actions" aria-label="Réglages audio">
+            <button class="icon-button audio-toggle music-toggle" data-action="toggle-music" aria-label="Activer ou couper la musique"><span id="music-icon">♫</span></button>
+            <button class="icon-button audio-toggle" data-action="toggle-sound" aria-label="Activer ou couper les effets sonores"><span id="sound-icon">◖</span></button>
+          </div>
         </header>
 
         <div class="home-content page-content">
@@ -36,6 +39,11 @@
               <div class="xp-track"><span id="home-xp-fill"></span></div>
             </div>
             <div class="currency-pill"><span class="coin-icon">◆</span><strong id="home-coins">240</strong></div>
+          </div>
+          <div class="audio-preferences" aria-label="Réglages audio">
+            <button class="audio-preference" data-action="toggle-sound"><span>EFFETS</span><strong id="sound-label">ON</strong></button>
+            <button class="audio-preference" data-action="toggle-music"><span>MUSIQUE</span><strong id="music-label">OFF</strong></button>
+            <label class="volume-preference"><span>VOLUME</span><input id="volume-control" type="range" min="0" max="100" step="1" value="72" aria-label="Volume des effets sonores" /><output id="volume-label">72%</output></label>
           </div>
 
           <article class="hero-card">
@@ -61,6 +69,7 @@
             <button class="quick-card missions-card" data-route="missions"><span class="quick-icon">✓</span><span>Missions</span><small id="home-mission-count">0 à réclamer</small></button>
             <button class="quick-card style-card" data-route="collection"><span class="quick-icon">◈</span><span>Atelier</span><small>Personnalise ton jeu</small></button>
             <button class="quick-card stats-card" data-route="stats"><span class="quick-icon">↗</span><span>Stats</span><small>Ta progression</small></button>
+            <button class="quick-card progression-card" data-route="progression"><span class="quick-icon">★</span><span>Progression</span><small id="home-progression-next">Route des récompenses</small></button>
           </div>
 
           <article class="daily-card" data-route="missions">
@@ -84,6 +93,18 @@
           <div id="board-wrap" class="board-wrap">
             <div id="board" class="board" role="grid" aria-label="Grille de jeu"></div>
             <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
+            <div id="clear-feedback" class="clear-feedback" aria-live="polite" aria-atomic="true" aria-hidden="true">
+              <div class="clear-feedback-badge">
+                <span class="clear-feedback-star">✦</span>
+                <strong id="clear-feedback-text"></strong>
+                <span class="clear-feedback-star">✦</span>
+                <small id="clear-feedback-subtitle"></small>
+              </div>
+            </div>
+            <div id="high-score-feedback" class="high-score-feedback" aria-live="polite" aria-hidden="true">
+              <span>NEW HIGH SCORE</span>
+              <strong id="high-score-value">0</strong>
+            </div>
           </div>
           <div class="game-subbar"><div><span class="eyebrow">FRAGMENTS</span><strong>Compose ton prochain mouvement</strong></div><button class="text-button" data-action="hint">INDICE <span>✧</span></button></div>
           <div id="booster-bar" class="booster-bar" aria-label="Bonus disponibles en partie"></div>
@@ -113,6 +134,11 @@
         </div>
       </section>
 
+      <section id="screen-progression" class="screen" aria-labelledby="progression-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home">‹</button><div><div class="eyebrow">TON PROCHAIN CAP</div><h1 id="progression-title">Progression</h1></div><div class="header-symbol progression-header-symbol">★</div></header>
+        <div class="page-content subpage-content"><div id="progression-content"></div></div>
+      </section>
+
       <section id="screen-stats" class="screen" aria-labelledby="stats-title">
         <header class="subpage-topbar"><button class="icon-button" data-route="home">‹</button><div><div class="eyebrow">TON PARCOURS</div><h1 id="stats-title">Statistiques</h1></div><div class="header-symbol">↗</div></header>
         <div class="page-content subpage-content"><div id="stats-content"></div></div>
@@ -130,6 +156,7 @@
       <div id="modal-card" class="modal-card" role="dialog" aria-modal="true"></div>
     </div>
     <div id="toast" class="toast" role="status"></div>
+    <div id="reward-layer" class="reward-layer" aria-hidden="true"></div>
   </div>
   <script src="game.js"></script>
 </body>
