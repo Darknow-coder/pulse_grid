@@ -45,10 +45,20 @@
       { id: 'ring', name: 'Anneaux', price: 200, description: 'Une onde lumineuse parcourt le plateau.', icon: '◎' },
       { id: 'confetti', name: 'Confettis', price: 320, description: 'Une pluie colorée pour les grands coups.', icon: '·✦·' },
       { id: 'spark', name: 'Étincelles', price: 430, description: 'Des étincelles rapides et nerveuses.', icon: '⁕' }
+    ],
+    boosters: [
+      { id: 'hammer', name: 'Marteau', price: 65, description: 'Retire un carré occupé pour ouvrir une nouvelle voie.', icon: '⌁' },
+      { id: 'reroll', name: 'Recomposition', price: 85, description: 'Remplace les fragments encore disponibles.', icon: '⟳' },
+      { id: 'pulse-core', name: 'Noyau Pulse', price: 120, description: 'Charge instantanément la prochaine Pulse Burst.', icon: '⚡' }
+    ],
+    packs: [
+      { id: 'starter', name: 'Pack de départ', price: 210, description: 'Un petit stock pour tes premières parties.', icon: '▣', contents: { hammer: 2, reroll: 1, 'pulse-core': 1 } },
+      { id: 'combo', name: 'Pack Combo', price: 390, description: 'Le kit idéal pour viser un nouveau record.', icon: '✦', contents: { hammer: 3, reroll: 2, 'pulse-core': 2 } },
+      { id: 'overdrive', name: 'Pack Overdrive', price: 680, description: 'Une réserve complète pour les longues sessions.', icon: '◆', contents: { hammer: 5, reroll: 3, 'pulse-core': 4 } }
     ]
   };
 
-  const DEFAULT_STATS = { games: 0, totalScore: 0, totalLines: 0, bestCombo: 0, piecesPlaced: 0, pulseBursts: 0 };
+  const DEFAULT_STATS = { games: 0, totalScore: 0, totalLines: 0, bestCombo: 0, piecesPlaced: 0, pulseBursts: 0, boostersUsed: 0 };
   const defaultSave = () => ({
     best: 0,
     coins: 240,
@@ -56,6 +66,7 @@
     level: 1,
     unlocked: { skins: ['aurora'], boards: ['night'], effects: ['burst'] },
     equipped: { skin: 'aurora', board: 'night', effect: 'burst' },
+    inventory: { hammer: 2, reroll: 1, 'pulse-core': 0 },
     stats: { ...DEFAULT_STATS },
     sound: true,
     missionDate: '',
@@ -73,6 +84,7 @@
     bestComboInGame: 0,
     charge: 0,
     pulseBursts: 0,
+    activeBooster: null,
     selectedPiece: null,
     drag: null,
     preview: [],
@@ -91,6 +103,7 @@
     const result = { ...base, ...(parsed || {}) };
     result.unlocked = { ...base.unlocked, ...((parsed && parsed.unlocked) || {}) };
     result.equipped = { ...base.equipped, ...((parsed && parsed.equipped) || {}) };
+    result.inventory = { ...base.inventory, ...((parsed && parsed.inventory) || {}) };
     result.stats = { ...DEFAULT_STATS, ...((parsed && parsed.stats) || {}) };
     ensureMissionsForToday(result);
     return result;
@@ -206,7 +219,9 @@
     document.addEventListener('pointerdown', handlePointerDown, { passive: false });
     document.addEventListener('pointermove', handlePointerMove, { passive: false });
     document.addEventListener('pointerup', handlePointerUp, { passive: false });
-    document.addEventListener('pointercancel', handlePointerUp, { passive: false });
+    document.addEventListener('pointercancel', cancelDrag, { passive: false });
+    window.addEventListener('blur', cancelDrag);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) cancelDrag(); });
     $('#modal-backdrop').addEventListener('click', event => { if (event.target.id === 'modal-backdrop') closeModal(); });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
   }
@@ -226,13 +241,17 @@
     const pieceButton = event.target.closest('[data-piece-index]');
     if (pieceButton && state.screen === 'game') {
       if (state.suppressPieceClick) { state.suppressPieceClick = false; return; }
+      if (state.activeBooster) { showToast('Utilise le bonus actif sur la grille.'); return; }
       selectPiece(Number(pieceButton.dataset.pieceIndex)); return;
     }
     const cell = event.target.closest('[data-cell-index]');
-    if (cell && state.screen === 'game' && state.selectedPiece !== null) {
+    if (cell && state.screen === 'game') {
       const index = Number(cell.dataset.cellIndex);
-      placeSelectedAt(Math.floor(index / GRID), index % GRID);
-      return;
+      if (state.activeBooster) { useBoosterAtCell(Math.floor(index / GRID), index % GRID); return; }
+      if (state.selectedPiece !== null) {
+        placeSelectedAt(Math.floor(index / GRID), index % GRID);
+        return;
+      }
     }
 
     const action = event.target.closest('[data-action]')?.dataset.action;
@@ -246,69 +265,210 @@
       case 'go-home': closeModal(); state.gameActive = false; state.paused = false; showScreen('home'); break;
       case 'close-modal': closeModal(); break;
       case 'hint': giveHint(); break;
+      case 'use-booster': useBooster(event.target.closest('[data-booster-id]')?.dataset.boosterId); break;
       case 'toggle-sound': toggleSound(); break;
       case 'claim-mission': claimMission(event.target.closest('[data-mission-id]')?.dataset.missionId); break;
       case 'buy-item': buyItem(event.target.closest('[data-item]')?.dataset.category, event.target.closest('[data-item]')?.dataset.item); break;
+      case 'buy-booster': buyBooster(event.target.closest('[data-booster-id]')?.dataset.boosterId); break;
+      case 'buy-pack': buyPack(event.target.closest('[data-pack-id]')?.dataset.packId); break;
       case 'equip-item': equipItem(event.target.closest('[data-item]')?.dataset.category, event.target.closest('[data-item]')?.dataset.item); break;
       case 'shop-tab': state.shopTab = event.target.closest('[data-shop-tab]').dataset.shopTab; renderShop(); break;
       default: break;
     }
   }
 
+  function cancelDrag() {
+    if (!state.drag) return;
+    state.drag.ghost?.remove();
+    state.drag = null;
+    state.suppressPieceClick = false;
+    clearPreview();
+  }
+
   function handlePointerDown(event) {
     const item = event.target.closest('.piece-item');
-    if (!item || item.classList.contains('used') || state.screen !== 'game' || state.resolving || !state.gameActive || state.paused) return;
+    if (!item || state.drag || state.activeBooster || item.classList.contains('used') || state.screen !== 'game' || state.resolving || !state.gameActive || state.paused) return;
+
+    const index = Number(item.dataset.pieceIndex);
+    const piece = state.queue[index];
+    const visual = item.querySelector('.piece-shape');
+    if (!piece || !visual) return;
+
+    // Toutes les coordonnées utilisées ici sont des coordonnées viewport :
+    // clientX/clientY + getBoundingClientRect(). Cela reste juste même si la
+    // page défile pendant le drag, sans compensation fixe liée au navigateur.
+    const visualRect = visual.getBoundingClientRect();
+    // L'offset peut aussi être légèrement extérieur au visuel (padding de la
+    // carte de pièce) : on le conserve brut pour éviter tout saut initial.
+    const grabOffsetX = event.clientX - visualRect.left;
+    const grabOffsetY = event.clientY - visualRect.top;
+    const hitX = clamp(grabOffsetX, 0, visualRect.width);
+    const hitY = clamp(grabOffsetY, 0, visualRect.height);
+    const computedVisual = getComputedStyle(visual);
+    const cssGap = parseFloat(computedVisual.gap) || 0;
+    const cssCellWidth = parseFloat(computedVisual.gridTemplateColumns) || visualRect.width / piece.cols;
+    const cssCellHeight = parseFloat(computedVisual.gridTemplateRows) || visualRect.height / piece.rows;
+    const cellPitchX = cssCellWidth + cssGap;
+    const cellPitchY = cssCellHeight + cssGap;
+    const naturalWidth = cssCellWidth * piece.cols + cssGap * Math.max(0, piece.cols - 1);
+    const naturalHeight = cssCellHeight * piece.rows + cssGap * Math.max(0, piece.rows - 1);
+    const trayScaleX = naturalWidth ? visualRect.width / naturalWidth : 1;
+    const trayScaleY = naturalHeight ? visualRect.height / naturalHeight : 1;
+
+    // On mémorise aussi la cellule visuelle située sous le doigt. La pièce
+    // peut être saisie par son centre, son bord ou son coin sans aucun saut.
+    const grabCol = clamp(Math.floor(hitX / (cellPitchX * trayScaleX)), 0, piece.cols - 1);
+    const grabRow = clamp(Math.floor(hitY / (cellPitchY * trayScaleY)), 0, piece.rows - 1);
+
+    // Le fantôme utilise maintenant les dimensions réelles des carrés du
+    // plateau. Une pièce de 3 cases affiche donc 3 carrés de la même taille
+    // que ceux qu'elle va occuper, quelle que soit la résolution du téléphone.
+    const boardMetrics = getBoardMetrics();
+    const dragCellWidth = boardMetrics?.cellWidth || cssCellWidth * trayScaleX;
+    const dragCellHeight = boardMetrics?.cellHeight || cssCellHeight * trayScaleY;
+    const dragGapX = boardMetrics?.gapX ?? cssGap * trayScaleX;
+    const dragGapY = boardMetrics?.gapY ?? cssGap * trayScaleY;
+    const trayCellWidth = cssCellWidth * trayScaleX;
+    const trayCellHeight = cssCellHeight * trayScaleY;
+    const trayPitchX = trayCellWidth + cssGap * trayScaleX;
+    const trayPitchY = trayCellHeight + cssGap * trayScaleY;
+    const offsetInsideTrayCellX = hitX - grabCol * trayPitchX;
+    const offsetInsideTrayCellY = hitY - grabRow * trayPitchY;
+    const cellFractionX = trayCellWidth ? offsetInsideTrayCellX / trayCellWidth : .5;
+    const cellFractionY = trayCellHeight ? offsetInsideTrayCellY / trayCellHeight : .5;
+    const ghostOffsetX = grabCol * (dragCellWidth + dragGapX) + cellFractionX * dragCellWidth;
+    const ghostOffsetY = grabRow * (dragCellHeight + dragGapY) + cellFractionY * dragCellHeight;
+
     event.preventDefault();
     state.suppressPieceClick = true;
-    const index = Number(item.dataset.pieceIndex);
-    selectPiece(index);
-    state.drag = { index, piece: state.queue[index], ghost: createPieceVisual(state.queue[index], true) };
-    state.drag.ghost.classList.add('drag-ghost');
-    document.body.appendChild(state.drag.ghost);
+    // Ne pas reconstruire le tray pendant pointerdown : l'élément touché
+    // resterait alors sans cible native sur certains Android. Le fragment
+    // fantôme et la sélection sont mis à jour sans interrompre le pointer.
+    state.selectedPiece = index;
+    $$('.piece-item.selected').forEach(pieceItem => pieceItem.classList.remove('selected'));
+    item.classList.add('selected');
+    clearPreview();
+    $('#game-message').textContent = 'Touche la grille pour déposer ce fragment.';
+
+    const ghost = createPieceVisual(piece, true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.setProperty('--drag-cell-width', `${dragCellWidth}px`);
+    ghost.style.setProperty('--drag-cell-height', `${dragCellHeight}px`);
+    ghost.style.setProperty('--drag-gap-x', `${dragGapX}px`);
+    ghost.style.setProperty('--drag-gap-y', `${dragGapY}px`);
+
+    state.drag = {
+      pointerId: event.pointerId,
+      index,
+      piece,
+      ghost,
+      grabOffsetX: ghostOffsetX,
+      grabOffsetY: ghostOffsetY,
+      grabCol,
+      grabRow
+    };
+    document.body.appendChild(ghost);
     updateGhost(event.clientX, event.clientY);
   }
 
   function handlePointerMove(event) {
-    if (!state.drag) return;
+    if (!state.drag || event.pointerId !== state.drag.pointerId) return;
     event.preventDefault();
     updateGhost(event.clientX, event.clientY);
-    const target = getDropCell(event.clientX, event.clientY, state.drag.piece);
-    if (target) showPreview(state.drag.piece, target.row, target.col);
+    const placement = getDropPlacement(event.clientX, event.clientY, state.drag);
+    if (placement) showPreview(state.drag.piece, placement);
     else clearPreview();
   }
 
   function handlePointerUp(event) {
-    if (!state.drag) return;
+    if (!state.drag || event.pointerId !== state.drag.pointerId) return;
     event.preventDefault();
     const drag = state.drag;
-    const target = getDropCell(event.clientX, event.clientY, drag.piece);
+    const placement = getDropPlacement(event.clientX, event.clientY, drag);
     drag.ghost?.remove();
     state.drag = null;
     clearPreview();
-    if (target && canPlace(drag.piece, target.row, target.col)) placePiece(drag.index, target.row, target.col);
+    if (placement?.valid) placePiece(drag.index, placement.row, placement.col);
+    else renderTray();
   }
 
   function updateGhost(x, y) {
     if (!state.drag?.ghost) return;
-    state.drag.ghost.style.left = `${x}px`;
-    state.drag.ghost.style.top = `${y - 48}px`;
+    // Le fantôme conserve exactement l'offset de saisie, sans valeur fixe
+    // comme une compensation de barre de navigateur ou de hauteur d'écran.
+    state.drag.ghost.style.left = `${x - state.drag.grabOffsetX}px`;
+    state.drag.ghost.style.top = `${y - state.drag.grabOffsetY}px`;
   }
 
-  function getDropCell(clientX, clientY, piece) {
-    const board = $('#board'); if (!board) return null;
-    const rect = board.getBoundingClientRect();
+  function getBoardMetrics() {
+    const board = $('#board');
+    if (!board || !board.children.length) return null;
+    const cells = [...board.children];
+    const firstCell = cells.find(cell => !cell.classList.contains('filled')) || cells[0];
+    if (!firstCell) return null;
+
+    const boardRect = board.getBoundingClientRect();
+    const measuredRect = firstCell.getBoundingClientRect();
+    const boardStyle = getComputedStyle(board);
+    const borderLeft = parseFloat(boardStyle.borderLeftWidth) || 0;
+    const borderTop = parseFloat(boardStyle.borderTopWidth) || 0;
+    const paddingLeft = parseFloat(boardStyle.paddingLeft) || 0;
+    const paddingTop = parseFloat(boardStyle.paddingTop) || 0;
+    const fallbackGap = parseFloat(boardStyle.gap) || 5;
+    const gapX = parseFloat(boardStyle.columnGap) || fallbackGap;
+    const gapY = parseFloat(boardStyle.rowGap) || fallbackGap;
+
+    return {
+      rect: boardRect,
+      originX: boardRect.left + borderLeft + paddingLeft,
+      originY: boardRect.top + borderTop + paddingTop,
+      cellWidth: measuredRect.width,
+      cellHeight: measuredRect.height,
+      gapX,
+      gapY
+    };
+  }
+
+  function getGridCellFromPoint(clientX, clientY) {
+    const metrics = getBoardMetrics();
+    if (!metrics) return null;
+    const { rect, originX, originY, cellWidth, cellHeight, gapX, gapY } = metrics;
     if (clientX < rect.left - 24 || clientX > rect.right + 24 || clientY < rect.top - 24 || clientY > rect.bottom + 24) return null;
-    const inner = rect.width - parseFloat(getComputedStyle(board).paddingLeft) * 2;
-    const gap = parseFloat(getComputedStyle(board).gap) || 5;
-    const padding = parseFloat(getComputedStyle(board).paddingLeft) || 8;
-    const cellSize = (inner - gap * (GRID - 1)) / GRID;
-    const x = clientX - rect.left - padding;
-    const y = clientY - rect.top - padding;
-    const centerCol = x / (cellSize + gap);
-    const centerRow = y / (cellSize + gap);
-    const col = Math.round(centerCol - (piece.cols - 1) / 2);
-    const row = Math.round(centerRow - (piece.rows - 1) / 2);
+
+    // clientX/clientY et getBoundingClientRect() partagent le même repère
+    // viewport. Le scroll éventuel est donc déjà pris en compte.
+    // Les dimensions viennent directement des vrais carrés du plateau.
+    const x = clientX - originX;
+    const y = clientY - originY;
+    const col = Math.round((x - cellWidth / 2) / (cellWidth + gapX));
+    const row = Math.round((y - cellHeight / 2) / (cellHeight + gapY));
     return { row, col };
+  }
+
+  function getPieceCenterAnchor(piece) {
+    return {
+      row: Math.floor((piece.rows - 1) / 2),
+      col: Math.floor((piece.cols - 1) / 2)
+    };
+  }
+
+  // Fonction centrale : transforme une cellule ciblée et une cellule
+  // d'ancrage de la pièce en position réelle de placement.
+  function getPlacementFromGridCell(piece, gridRow, gridCol, anchor = getPieceCenterAnchor(piece)) {
+    const row = gridRow - anchor.row;
+    const col = gridCol - anchor.col;
+    return { row, col, valid: canPlace(piece, row, col) };
+  }
+
+  function getPlacementFromTopLeft(piece, row, col) {
+    const anchor = getPieceCenterAnchor(piece);
+    return getPlacementFromGridCell(piece, row + anchor.row, col + anchor.col, anchor);
+  }
+
+  function getDropPlacement(clientX, clientY, drag) {
+    const gridCell = getGridCellFromPoint(clientX, clientY);
+    if (!gridCell || !drag?.piece) return null;
+    return getPlacementFromGridCell(drag.piece, gridCell.row, gridCell.col, { row: drag.grabRow, col: drag.grabCol });
   }
 
   function selectPiece(index) {
@@ -327,22 +487,20 @@
     const index = state.selectedPiece;
     if (index === null || !state.queue[index]) return;
     const piece = state.queue[index];
-    // En mode "toucher puis toucher", le doigt indique le centre du fragment,
-    // ce qui est beaucoup plus naturel qu'un ancrage sur le coin supérieur gauche.
-    const anchorRow = row - Math.floor((piece.rows - 1) / 2);
-    const anchorCol = col - Math.floor((piece.cols - 1) / 2);
-    if (!canPlace(piece, anchorRow, anchorCol)) {
-      showPreview(piece, anchorRow, anchorCol);
+    const placement = getPlacementFromGridCell(piece, row, col);
+    if (!placement.valid) {
+      showPreview(piece, placement);
       showToast('Cet emplacement ne peut pas accueillir ce fragment.');
       vibrate(16);
       return;
     }
-    placePiece(index, anchorRow, anchorCol);
+    placePiece(index, placement.row, placement.col);
   }
 
-  function showPreview(piece, row, col) {
+  function showPreview(piece, placement) {
     clearPreview();
-    const valid = canPlace(piece, row, col);
+    if (!piece || !placement) return;
+    const { row, col, valid } = placement;
     state.preview = piece.cells.map(([dr, dc]) => ({ row: row + dr, col: col + dc, valid }));
     state.preview.forEach(({ row: r, col: c, valid: ok }) => {
       if (r >= 0 && r < GRID && c >= 0 && c < GRID) $('#board').children[r * GRID + c].classList.add(ok ? 'preview-valid' : 'preview-invalid');
@@ -422,10 +580,136 @@
     message.textContent = ready ? 'La prochaine ligne déclenche une Pulse Burst !' : 'Dissous des lignes pour charger une rafale.';
   }
 
+  const BOOSTER_DEFS = [
+    { id: 'hammer', label: 'Marteau', short: 'Retirer 1 carré', icon: '⌁' },
+    { id: 'reroll', label: 'Recomp.', short: 'Changer les pièces', icon: '⟳' },
+    { id: 'pulse-core', label: 'Noyau', short: 'Charger Pulse', icon: '⚡' }
+  ];
+
+  function renderBoosters() {
+    const bar = $('#booster-bar');
+    if (!bar) return;
+    bar.innerHTML = BOOSTER_DEFS.map(def => {
+      const count = profile.inventory[def.id] || 0;
+      const active = state.activeBooster === def.id;
+      const disabled = count <= 0 || state.resolving || !state.gameActive;
+      return `<button class="booster-button${active ? ' active' : ''}" data-action="use-booster" data-booster-id="${def.id}" ${disabled && !active ? 'disabled' : ''} aria-label="${def.label}, ${count} disponible${count > 1 ? 's' : ''}"><span class="booster-symbol">${def.icon}</span><span class="booster-info"><b>${active ? 'ANNULER' : def.label}</b><small>${active ? 'Touche un carré' : def.short}</small></span><strong class="booster-count">${count}</strong></button>`;
+    }).join('');
+  }
+
+  function animateTrayArrival() {
+    $$('#piece-tray .piece-item').forEach((item, index) => {
+      item.style.setProperty('--tray-delay', `${index * 55}ms`);
+      retriggerClass(item, 'tray-arrive');
+    });
+  }
+
+  function animateBoosterArrival() {
+    $$('#booster-bar .booster-button').forEach((button, index) => {
+      button.style.setProperty('--booster-delay', `${index * 55}ms`);
+      retriggerClass(button, 'booster-arrive');
+    });
+  }
+
+  function animatePlacedCells(cells) {
+    cells.forEach(([row, col], index) => {
+      const cell = $('#board').children[row * GRID + col];
+      if (!cell) return;
+      cell.style.setProperty('--landing-delay', `${Math.min(index * 24, 120)}ms`);
+      retriggerClass(cell, 'landing');
+      setTimeout(() => cell.style.removeProperty('--landing-delay'), 520);
+    });
+  }
+
+  function animateShopItem(attribute, value, className = 'purchase-pop') {
+    const item = $$(`[${attribute}]`).find(element => element.getAttribute(attribute) === value);
+    retriggerClass(item, className);
+  }
+
+  function consumeBooster(id) {
+    if (!profile.inventory[id] || profile.inventory[id] <= 0) {
+      showToast('Ce bonus est épuisé.');
+      return false;
+    }
+    profile.inventory[id] -= 1;
+    profile.stats.boostersUsed += 1;
+    saveProfile();
+    renderBoosters();
+    if (state.screen === 'shop') renderShop();
+    return true;
+  }
+
+  function useBooster(id) {
+    if (!id || !state.gameActive || state.resolving) return;
+    if (id === 'hammer') {
+      if (state.activeBooster === 'hammer') {
+        state.activeBooster = null;
+        renderBoosters();
+        $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.';
+        return;
+      }
+      if (!(profile.inventory.hammer > 0)) return showToast('Tu n’as plus de Marteau.');
+      state.activeBooster = 'hammer';
+      state.selectedPiece = null;
+      clearPreview();
+      renderTray();
+      renderBoosters();
+      $('#game-message').textContent = 'Marteau actif : touche un carré occupé à retirer.';
+      vibrate(16); playTone(720, .06);
+      return;
+    }
+
+    if (!consumeBooster(id)) return;
+    state.activeBooster = null;
+    state.selectedPiece = null;
+    clearPreview();
+    renderTray();
+
+    if (id === 'reroll') {
+      state.queue = state.queue.map(piece => piece ? generatePiece() : null);
+      if (!state.queue.some(piece => piece && canAnyPlace(piece))) state.queue[0] = makePiece(SHAPE_LIBRARY[0]);
+      renderTray(); renderBoosters(); animateTrayArrival();
+      triggerBoardImpact('place');
+      spawnScorePopup('RECOMPO !', 'combo', [], true);
+      showToast('Nouveaux fragments en approche.');
+      vibrate([15, 12, 20]); playTone(820, .1);
+    } else if (id === 'pulse-core') {
+      state.charge = 100;
+      renderHud(); renderBoosters();
+      triggerBoardImpact('pulse');
+      spawnScorePopup('CHARGE !', 'pulse', [], true);
+      showToast('La prochaine ligne déclenchera une Pulse Burst.');
+      vibrate([18, 15, 30]); playTone(980, .13);
+    }
+    saveProfile();
+  }
+
+  function useBoosterAtCell(row, col) {
+    if (state.activeBooster !== 'hammer' || state.resolving || !state.gameActive) return;
+    if (!state.board[row][col]) {
+      showToast('Choisis un carré occupé.');
+      vibrate(12);
+      return;
+    }
+    if (!consumeBooster('hammer')) return;
+    state.board[row][col] = null;
+    state.activeBooster = null;
+    state.selectedPiece = null;
+    renderBoard(); renderTray(); renderHud(); renderBoosters();
+    triggerClearEffect([[row, col]], false);
+    triggerBoardImpact('clear');
+    spawnScorePopup('LIBÉRÉ', 'clear', [[row, col]], true);
+    $('#game-message').textContent = 'Un espace vient de se libérer. À toi de jouer.';
+    showToast('Carré retiré.');
+    vibrate([18, 14, 26]); playTone(680, .1);
+    saveProfile();
+  }
+
   function startNewGame() {
+    cancelDrag();
     closeModal();
-    state.screen = 'game'; state.board = createEmptyBoard(); state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.selectedPiece = null; state.resolving = false; state.gameActive = true; state.paused = false;
-    showScreen('game'); renderBoard(); renderTray(); renderHud(); $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.'; vibrate(10); playTone(440, .05);
+    state.screen = 'game'; state.board = createEmptyBoard(); state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.gameActive = true; state.paused = false;
+    showScreen('game'); renderBoard(); renderTray(); renderHud(); renderBoosters(); animateTrayArrival(); animateBoosterArrival(); $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.'; vibrate(10); playTone(440, .05);
   }
 
   function showScreen(route) {
@@ -452,14 +736,35 @@
     return { rows: fullRows, cols: fullCols, cells: [...cells].map(value => value.split(',').map(Number)) };
   }
 
+  function calculatePlacementScore(piece) {
+    return piece.cells.length * 10;
+  }
+
+  // Barème volontairement lisible : 100 pts par ligne, un bonus par case
+  // effectivement effacée, puis un bonus de combo. Les intersections ligne /
+  // colonne ne sont comptées qu'une seule fois dans completed.cells.
+  function calculateClearScore(completed, combo, pulseBonus = 0) {
+    const lineCount = completed.rows.length + completed.cols.length;
+    const lineScore = lineCount * 100;
+    const clearedCellScore = completed.cells.length * 15;
+    const comboScore = Math.max(0, combo - 1) * 70;
+    return lineScore + clearedCellScore + comboScore + pulseBonus;
+  }
+
   function placePiece(index, row, col) {
     if (state.resolving || !state.gameActive) return;
     const piece = state.queue[index]; if (!piece || !canPlace(piece, row, col)) return;
     state.resolving = true; state.selectedPiece = null;
+    const scoreBeforeMove = state.score;
+    const placedCells = piece.cells.map(([dr, dc]) => [row + dr, col + dc]);
+    const placementScore = calculatePlacementScore(piece);
     piece.cells.forEach(([dr, dc]) => { state.board[row + dr][col + dc] = { piece: piece.id }; });
     profile.stats.piecesPlaced += 1; updateMission('pieces', 1);
-    state.score += piece.cells.length * 10;
-    state.queue[index] = null; renderBoard(); renderTray(); renderHud(); vibrate(18); playTone(580, .06);
+    state.score += placementScore;
+    state.queue[index] = null; renderBoard(); renderTray(); renderHud(); animatePlacedCells(placedCells);
+    spawnScorePopup(`+${formatNumber(placementScore)}`, 'place', placedCells);
+    triggerBoardImpact('place');
+    vibrate(18); playTone(580, .06);
     const completed = clearCompletedLines();
     if (completed.cells.length) {
       const clearedLines = completed.rows.length + completed.cols.length;
@@ -471,19 +776,31 @@
         state.charge = 0; state.pulseBursts += 1; profile.stats.pulseBursts += 1; pulseBonus = 250 + clearedLines * 75;
         updateMission('pulse', 1);
       } else state.charge = Math.min(100, state.charge + chargeGain);
-      const clearScore = completed.rows.length * 100 + completed.cols.length * 100 + completed.cells.length * 15 + Math.max(0, state.combo - 1) * 70 + pulseBonus;
+      const clearScore = calculateClearScore(completed, state.combo, pulseBonus);
       state.score += clearScore;
       profile.stats.totalLines += clearedLines;
       if (state.combo > profile.stats.bestCombo) profile.stats.bestCombo = state.combo;
       updateMission('lines', clearedLines); updateMission('combo', state.combo); updateMission('score', state.score);
       markCellsClearing(completed.cells);
       triggerClearEffect(completed.cells, pulseReady);
+      triggerBoardImpact(pulseReady ? 'pulse' : 'clear');
+      spawnScorePopup(`+${formatNumber(clearScore)}`, pulseReady ? 'pulse' : 'clear', completed.cells);
+      if (state.combo > 1) {
+        spawnScorePopup(`COMBO ×${state.combo}`, 'combo', completed.cells, true);
+        renderHud();
+        retriggerClass($('#combo-badge'), 'combo-pop');
+      }
       $('#game-message').textContent = pulseReady ? 'PULSE BURST ! La grille vient de surcharger.' : `${clearedLines} ligne${clearedLines > 1 ? 's' : ''} dissoute${clearedLines > 1 ? 's' : ''} !`;
       showToast(pulseReady ? `PULSE BURST  ·  +${formatNumber(clearScore)} pts` : state.combo > 1 ? `Combo ×${state.combo}  ·  +${formatNumber(clearScore)} pts` : `Impulsion parfaite  ·  +${formatNumber(clearScore)} pts`);
-      vibrate(pulseReady ? 70 : 35); playTone(pulseReady ? 1040 : 760 + state.combo * 35, pulseReady ? .2 : .12);
+      vibrate(pulseReady ? [25, 18, 50] : clearedLines > 1 ? [18, 14, 30] : 35); playTone(pulseReady ? 1040 : 760 + state.combo * 35, pulseReady ? .2 : .12);
       setTimeout(() => finishClear(completed), pulseReady ? 440 : 300);
     } else {
       state.combo = 0; updateMission('score', state.score); setTimeout(finishTurn, 110);
+    }
+    if (profile.best > 0 && scoreBeforeMove < profile.best && state.score >= profile.best) {
+      showToast('RECORD EN VUE ! Continue comme ça.');
+      spawnScorePopup('RECORD !', 'pulse', placedCells, true);
+      playTone(980, .1);
     }
     renderHud(); saveProfile();
   }
@@ -513,15 +830,18 @@
 
   function endGame() {
     if (!state.gameActive) return;
-    state.gameActive = false; state.resolving = false;
+    state.gameActive = false; state.resolving = false; state.activeBooster = null;
+    renderBoosters();
     const reward = 20 + Math.floor(state.score / 250) + state.lines * 3 + Math.max(0, state.bestComboInGame - 1) * 5 + state.pulseBursts * 12;
     const xpEarned = 45 + Math.floor(state.score / 28) + state.lines * 12;
     const levelBefore = profile.level;
+    const previousBest = profile.best;
+    const isNewRecord = state.score > previousBest;
     profile.coins += reward; profile.stats.games += 1; profile.stats.totalScore += state.score; profile.best = Math.max(profile.best, state.score);
     updateMission('games', 1); updateMission('score', state.score);
     const levels = addXp(xpEarned);
     saveProfile(); renderHome(); renderMissions(); renderStats(); renderHud();
-    openEndModal(reward, xpEarned, levels, levelBefore);
+    openEndModal(reward, xpEarned, levels, levelBefore, isNewRecord, previousBest);
   }
 
   function addXp(amount) {
@@ -541,7 +861,7 @@
 
   function claimMission(id) {
     const mission = profile.missions.find(item => item.id === id); if (!mission || mission.claimed || mission.progress < mission.target) return;
-    mission.claimed = true; profile.coins += mission.reward; saveProfile(); renderHome(); renderMissions(); renderShop(); showToast(`+${mission.reward} PulseCoins · mission validée`); playTone(880, .12); vibrate(25);
+    mission.claimed = true; profile.coins += mission.reward; saveProfile(); renderHome(); renderMissions(); renderShop(); animateShopItem('data-mission-id', id, 'mission-claim'); showToast(`+${mission.reward} PulseCoins · mission validée`); playTone(880, .12); vibrate(25);
   }
 
   function renderHome() {
@@ -556,8 +876,27 @@
   function renderShop() {
     $('#shop-coins').textContent = formatNumber(profile.coins);
     $$('[data-shop-tab]').forEach(button => button.classList.toggle('active', button.dataset.shopTab === state.shopTab));
+    if (state.shopTab === 'boosters') {
+      $('#shop-content').innerHTML = renderBoosterShop();
+      return;
+    }
     const items = CATALOG[state.shopTab];
     $('#shop-content').innerHTML = items.map(item => renderCatalogCard(state.shopTab, item, 'shop')).join('');
+  }
+
+  function renderBoosterShop() {
+    const packs = CATALOG.packs.map(pack => {
+      const contents = Object.entries(pack.contents).map(([id, count]) => {
+        const booster = CATALOG.boosters.find(item => item.id === id);
+        return `<span><b>${booster?.icon || '◆'}</b> ${count} ${booster?.name || id}</span>`;
+      }).join('');
+      return `<article class="catalog-card pack-card" data-pack-id="${pack.id}"><div class="catalog-preview pack-preview"><span>${pack.icon}</span></div><div class="pack-kicker">PACK DE BOOSTERS</div><h3>${pack.name}</h3><p>${pack.description}</p><div class="pack-contents">${contents}</div><button class="item-action buy" data-action="buy-pack">◆ ${pack.price}</button></article>`;
+    }).join('');
+    const boosters = CATALOG.boosters.map(item => {
+      const count = profile.inventory[item.id] || 0;
+      return `<article class="catalog-card booster-card" data-booster-id="${item.id}"><div class="catalog-preview booster-preview"><span>${item.icon}</span></div><div class="booster-card-head"><h3>${item.name}</h3><strong>${count}</strong></div><p>${item.description}</p><div class="inventory-line"><span>EN STOCK</span><b>${count}</b></div><button class="item-action buy" data-action="buy-booster">◆ ${item.price}</button></article>`;
+    }).join('');
+    return `<div class="booster-shop"><div class="booster-shop-intro"><div class="booster-shop-icon">⚡</div><div><span class="eyebrow accent">CONSOMMABLES</span><strong>Prépare ton prochain run.</strong><small>Les bonus achetés restent dans ton inventaire et se dépensent uniquement en partie.</small></div></div><div class="shop-section-label">PACKS AVANTAGEUX</div><div class="catalog-grid pack-grid">${packs}</div><div class="shop-section-label">À L'UNITÉ</div><div class="catalog-grid booster-grid">${boosters}</div></div>`;
   }
 
   function renderCollection() {
@@ -585,12 +924,44 @@
   function buyItem(category, id) {
     if (!category || !id) return; const item = findCatalog(category, id); if (isUnlocked(category, id)) { equipItem(category, id); return; }
     if (profile.coins < item.price) { showToast('Pas assez de PulseCoins pour cet élément.'); vibrate(20); return; }
-    profile.coins -= item.price; profile.unlocked[category].push(id); saveProfile(); renderShop(); renderCollection(); renderHome(); showToast(`${item.name} débloqué !`); playTone(700, .1); vibrate(22);
+    profile.coins -= item.price; profile.unlocked[category].push(id); saveProfile(); renderShop(); renderCollection(); renderHome(); animateShopItem('data-item', id); showToast(`${item.name} débloqué !`); playTone(700, .1); vibrate(22);
+  }
+
+  function buyBooster(id) {
+    const booster = CATALOG.boosters.find(item => item.id === id);
+    if (!booster) return;
+    if (profile.coins < booster.price) {
+      showToast('Pas assez de PulseCoins pour ce bonus.');
+      vibrate(20);
+      return;
+    }
+    profile.coins -= booster.price;
+    profile.inventory[id] = (profile.inventory[id] || 0) + 1;
+    saveProfile(); renderShop(); renderHome(); renderBoosters(); animateShopItem('data-booster-id', id);
+    showToast(`${booster.name} ajouté à l'inventaire.`);
+    playTone(720, .1); vibrate(22);
+  }
+
+  function buyPack(id) {
+    const pack = CATALOG.packs.find(item => item.id === id);
+    if (!pack) return;
+    if (profile.coins < pack.price) {
+      showToast('Pas assez de PulseCoins pour ce pack.');
+      vibrate(20);
+      return;
+    }
+    profile.coins -= pack.price;
+    Object.entries(pack.contents).forEach(([boosterId, amount]) => {
+      profile.inventory[boosterId] = (profile.inventory[boosterId] || 0) + amount;
+    });
+    saveProfile(); renderShop(); renderHome(); renderBoosters(); animateShopItem('data-pack-id', id);
+    showToast(`${pack.name} ouvert : bonus ajoutés !`);
+    playTone(860, .12); vibrate([18, 14, 30]);
   }
 
   function equipItem(category, id) {
     if (!category || !id || !isUnlocked(category, id)) return;
-    const key = category.slice(0, -1); profile.equipped[key] = id; applyTheme(); saveProfile(); renderShop(); renderCollection(); showToast(`${findCatalog(category, id).name} équipé`); playTone(600, .07);
+    const key = category.slice(0, -1); profile.equipped[key] = id; applyTheme(); saveProfile(); renderShop(); renderCollection(); animateShopItem('data-item', id, 'equip-pop'); showToast(`${findCatalog(category, id).name} équipé`); playTone(600, .07);
   }
 
   function renderMissions() {
@@ -603,7 +974,7 @@
 
   function renderStats() {
     const next = xpForNextLevel(profile.level); const ratio = clamp(profile.xp / next * 100, 0, 100); const stats = profile.stats;
-    $('#stats-content').innerHTML = `<article class="stats-level-card"><div class="stats-level-top"><div><span class="eyebrow accent">NIVEAU ACTUEL</span><h2>Architecte de pulse</h2></div><strong>${profile.level}</strong></div><p>${formatNumber(profile.xp)} / ${formatNumber(next)} XP avant le niveau ${profile.level + 1}</p><div class="xp-track"><span style="width:${ratio}%"></span></div></article><div class="stats-grid"><article class="stat-box"><span>Meilleur score</span><strong>${formatNumber(profile.best)}</strong><em>record personnel</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(stats.games)}</strong><em>tentatives</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(stats.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(stats.bestCombo)}</strong><em>chaîne maximale</em></article><article class="stat-box"><span>Score cumulé</span><strong>${formatNumber(stats.totalScore)}</strong><em>toutes parties</em></article><article class="stat-box"><span>Fragments posés</span><strong>${formatNumber(stats.piecesPlaced)}</strong><em>patience & précision</em></article><article class="stat-box"><span>Pulse Bursts</span><strong>${formatNumber(stats.pulseBursts)}</strong><em>surcharges parfaites</em></article></div><div class="tip-card">Les scores, objets et missions sont enregistrés automatiquement sur cet appareil grâce à <strong>localStorage</strong>. Ferme le jeu sans crainte : ta progression reste là.</div>`;
+    $('#stats-content').innerHTML = `<article class="stats-level-card"><div class="stats-level-top"><div><span class="eyebrow accent">NIVEAU ACTUEL</span><h2>Architecte de pulse</h2></div><strong>${profile.level}</strong></div><p>${formatNumber(profile.xp)} / ${formatNumber(next)} XP avant le niveau ${profile.level + 1}</p><div class="xp-track"><span style="width:${ratio}%"></span></div></article><div class="stats-grid"><article class="stat-box"><span>Meilleur score</span><strong>${formatNumber(profile.best)}</strong><em>record personnel</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(stats.games)}</strong><em>tentatives</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(stats.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(stats.bestCombo)}</strong><em>chaîne maximale</em></article><article class="stat-box"><span>Score cumulé</span><strong>${formatNumber(stats.totalScore)}</strong><em>toutes parties</em></article><article class="stat-box"><span>Fragments posés</span><strong>${formatNumber(stats.piecesPlaced)}</strong><em>patience & précision</em></article><article class="stat-box"><span>Pulse Bursts</span><strong>${formatNumber(stats.pulseBursts)}</strong><em>surcharges parfaites</em></article><article class="stat-box"><span>Bonus utilisés</span><strong>${formatNumber(stats.boostersUsed)}</strong><em>coups de secours</em></article></div><div class="tip-card">Les scores, objets et missions sont enregistrés automatiquement sur cet appareil grâce à <strong>localStorage</strong>. Ferme le jeu sans crainte : ta progression reste là.</div>`;
   }
 
   function giveHint() {
@@ -615,7 +986,7 @@
       const nearFull = [...Array(GRID)].map((_, i) => state.board[r + i]?.filter(Boolean).length || 0).reduce((a, b) => a + b, 0); value += nearFull * .01;
       if (value > bestValue) { bestValue = value; best = { r, c }; }
     }
-    const index = state.queue.indexOf(piece); selectPiece(index); showPreview(piece, best.r, best.c); showToast('Indice : cette position garde de l’espace pour la suite.');
+    const index = state.queue.indexOf(piece); selectPiece(index); showPreview(piece, getPlacementFromTopLeft(piece, best.r, best.c)); showToast('Indice : cette position garde de l’espace pour la suite.');
     setTimeout(clearPreview, 1100);
   }
 
@@ -625,9 +996,13 @@
     openModal(`<div class="pause-icon">Ⅱ</div><span class="modal-kicker">PARTIE EN PAUSE</span><h2>Garde ton rythme.</h2><p>La partie est en sécurité. Reviens quand tu veux continuer à construire ta grille.</p><div class="modal-actions"><button class="secondary" data-action="go-home">ACCUEIL</button><button class="secondary" data-action="restart">RECOMMENCER</button><button class="primary" data-action="resume">CONTINUER</button></div>`);
   }
 
-  function openEndModal(reward, xpEarned, levels, levelBefore) {
+  function openEndModal(reward, xpEarned, levels, levelBefore, isNewRecord, previousBest) {
     const levelText = levels ? `<div class="level-up">NIVEAU ${levelBefore + levels} atteint · bonus de progression ajouté</div>` : '';
-    openModal(`<span class="modal-kicker">LA GRILLE S'EST ÉTEINTE</span><h2>Bien joué.</h2><p>Chaque partie prépare le prochain record. Ton énergie récoltée rejoint ta collection.</p><div class="result-score"><span>SCORE FINAL</span><strong>${formatNumber(state.score)}</strong></div><div class="result-stats"><div class="result-stat"><strong>${formatNumber(state.lines)}</strong><span>lignes</span></div><div class="result-stat"><strong>×${formatNumber(Math.max(profile.stats.bestCombo, state.bestComboInGame))}</strong><span>combo max</span></div><div class="result-stat"><strong>${formatNumber(state.pulseBursts)}</strong><span>bursts</span></div><div class="result-stat"><strong>${formatNumber(profile.best)}</strong><span>meilleur</span></div></div><div class="reward-row"><div>◆ ${reward}<span>PulseCoins</span></div><div>✦ ${xpEarned}<span>XP gagnés</span></div></div>${levelText}<div class="modal-actions"><button class="secondary" data-action="game-home">ACCUEIL</button><button class="primary" data-action="restart">REJOUER</button></div>`);
+    const recordKicker = isNewRecord ? 'NOUVEAU RECORD' : 'LA GRILLE S\'EST ÉTEINTE';
+    const recordTitle = isNewRecord ? 'Tu viens de monter la barre.' : 'Bien joué.';
+    const recordMessage = isNewRecord ? 'Cette partie devient ton nouveau repère. Encore une pour voir jusqu\'où tu peux pousser la grille.' : previousBest > 0 ? `Il te manquait ${formatNumber(Math.max(0, previousBest - state.score))} points pour battre ton record.` : 'Chaque partie construit ton premier record. Le prochain coup peut déjà tout changer.';
+    openModal(`<span class="modal-kicker ${isNewRecord ? 'record-kicker' : ''}">${recordKicker}</span><h2>${recordTitle}</h2><p>${recordMessage}</p><div class="result-score ${isNewRecord ? 'record-score' : ''}"><span>SCORE FINAL</span><strong>${formatNumber(state.score)}</strong></div><div class="result-stats"><div class="result-stat"><strong>${formatNumber(state.lines)}</strong><span>lignes</span></div><div class="result-stat"><strong>×${formatNumber(Math.max(profile.stats.bestCombo, state.bestComboInGame))}</strong><span>combo max</span></div><div class="result-stat"><strong>${formatNumber(state.pulseBursts)}</strong><span>bursts</span></div><div class="result-stat"><strong>${formatNumber(profile.best)}</strong><span>meilleur</span></div></div><div class="reward-row"><div>◆ ${reward}<span>PulseCoins</span></div><div>✦ ${xpEarned}<span>XP gagnés</span></div></div>${levelText}<div class="modal-actions"><button class="secondary" data-action="game-home">ACCUEIL</button><button class="primary" data-action="restart">REJOUER</button></div>`);
+    if (isNewRecord) { playTone(1180, .14); vibrate([22, 18, 35]); }
   }
 
   function openModal(content) { $('#modal-card').innerHTML = content; $('#modal-backdrop').classList.add('open'); $('#modal-backdrop').setAttribute('aria-hidden', 'false'); }
@@ -647,6 +1022,37 @@
       particle.style.left = `${x}%`; particle.style.top = `${y}%`; particle.style.setProperty('--dx', `${(Math.random() - .5) * (pulseBurst ? 150 : 95)}px`); particle.style.setProperty('--dy', `${-15 - Math.random() * (pulseBurst ? 110 : 75)}px`); particle.style.animationDelay = `${index * (pulseBurst ? 7 : 12)}ms`; layer.appendChild(particle); setTimeout(() => particle.remove(), pulseBurst ? 1100 : 850);
     });
     if (pulseBurst || effect === 'spark') layer.animate([{ opacity: .35 }, { opacity: 1 }, { opacity: .35 }], { duration: pulseBurst ? 440 : 320, iterations: 2 });
+  }
+
+  function spawnScorePopup(text, type = 'place', cells = [], raised = false) {
+    const layer = $('#fx-layer');
+    if (!layer) return;
+    const points = cells.length ? cells : [[3, 3]];
+    const averageRow = points.reduce((sum, cell) => sum + cell[0], 0) / points.length;
+    const averageCol = points.reduce((sum, cell) => sum + cell[1], 0) / points.length;
+    const popup = document.createElement('span');
+    popup.className = `score-pop ${type}${raised ? ' raised' : ''}`;
+    popup.textContent = text;
+    popup.style.left = `${clamp(((averageCol + .5) / GRID) * 100, 8, 92)}%`;
+    popup.style.top = `${clamp(((averageRow + .5) / GRID) * 100, 12, 88)}%`;
+    layer.appendChild(popup);
+    setTimeout(() => popup.remove(), type === 'pulse' ? 1150 : 900);
+  }
+
+  function retriggerClass(element, className) {
+    if (!element) return;
+    element.classList.remove(className);
+    void element.offsetWidth;
+    element.classList.add(className);
+  }
+
+  function triggerBoardImpact(type = 'place') {
+    const boardWrap = $('#board-wrap');
+    if (!boardWrap) return;
+    boardWrap.classList.remove('impact-place', 'impact-clear', 'impact-pulse');
+    void boardWrap.offsetWidth;
+    boardWrap.classList.add(`impact-${type}`);
+    setTimeout(() => boardWrap.classList.remove(`impact-${type}`), type === 'pulse' ? 520 : 300);
   }
 
   function showToast(message) {

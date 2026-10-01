@@ -31,7 +31,10 @@ Puis ouvre `http://localhost:8000` sur l'ordinateur, ou l'adresse IP locale depu
 - Fin de partie, meilleur score et bouton rejouer.
 - Niveau, XP, récompense de niveau et statistiques cumulées.
 - PulseCoins gagnés en fin de partie et via les missions.
-- Boutique virtuelle avec skins de fragments, plateaux et effets de destruction.
+- Boutique virtuelle avec skins de fragments, plateaux, effets de destruction et bonus consommables.
+- Packs de bonus achetables avec des PulseCoins.
+- Bonus utilisables en partie : Marteau, Recomposition et Noyau Pulse.
+- Inventaire de bonus sauvegardé localement.
 - Atelier pour équiper les éléments débloqués.
 - Missions quotidiennes renouvelées selon la date locale.
 - Sauvegarde automatique avec `localStorage`.
