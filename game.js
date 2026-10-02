@@ -151,6 +151,7 @@
     selectedPiece: null,
     drag: null,
     preview: [],
+    previewNodes: [],
     previewKey: '',
     resolving: false,
     gameActive: false,
@@ -340,6 +341,10 @@
     document.addEventListener('pointerup', handlePointerUp, { passive: false });
     document.addEventListener('pointercancel', cancelDrag, { passive: false });
     window.addEventListener('blur', cancelDrag);
+    const invalidateBoardMetrics = () => { state.boardMetricsCache = null; };
+    window.addEventListener('resize', invalidateBoardMetrics, { passive: true });
+    window.addEventListener('orientationchange', invalidateBoardMetrics, { passive: true });
+    window.addEventListener('scroll', invalidateBoardMetrics, { passive: true, capture: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden) cancelDrag(); });
     $('#modal-backdrop').addEventListener('click', event => { if (event.target.id === 'modal-backdrop') closeModal(); });
     $('#volume-control')?.addEventListener('input', event => {
@@ -423,6 +428,7 @@
       if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(state.drag.frame);
       else clearTimeout(state.drag.frame);
     }
+    state.drag.sourceItem?.releasePointerCapture?.(state.drag.pointerId);
     state.drag.ghost?.remove();
     state.drag = null;
     state.suppressPieceClick = false;
@@ -491,7 +497,7 @@
     state.selectedPiece = index;
     $$('.piece-item.selected').forEach(pieceItem => pieceItem.classList.remove('selected'));
     item.classList.add('selected');
-    playSfx('select'); vibrate(9);
+    vibrate(9);
     clearPreview();
     $('#game-message').textContent = 'Touche la grille pour déposer ce fragment.';
 
@@ -507,16 +513,24 @@
       index,
       piece,
       ghost,
+      sourceItem: item,
       grabOffsetX: ghostOffsetX,
       grabOffsetY: ghostOffsetY,
       grabCol,
       grabRow,
       pendingX: event.clientX,
       pendingY: event.clientY,
+      previewCellKey: '',
       frame: null
     };
+    item.setPointerCapture?.(event.pointerId);
     document.body.appendChild(ghost);
     updateGhost(event.clientX, event.clientY);
+    const playSelectSound = () => {
+      if (state.drag?.pointerId === event.pointerId) playSfx('select');
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(playSelectSound);
+    else setTimeout(playSelectSound, 0);
   }
 
   function handlePointerMove(event) {
@@ -524,21 +538,31 @@
     event.preventDefault();
     const drag = state.drag;
     drag.pendingX = event.clientX; drag.pendingY = event.clientY;
+    // Le fantôme suit le doigt immédiatement sur le thread de composition;
+    // seul le calcul de preview est regroupé sur la prochaine frame.
+    updateGhost(event.clientX, event.clientY, drag);
     if (drag.frame !== null) return;
     const paint = () => {
       if (!state.drag || state.drag !== drag) return;
       drag.frame = null;
-      applyDragPosition(drag, drag.pendingX, drag.pendingY);
+      updateDragPreview(drag, drag.pendingX, drag.pendingY);
     };
     drag.frame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(paint) : setTimeout(paint, 16);
   }
 
-  function applyDragPosition(drag, x, y) {
+  function updateDragPreview(drag, x, y) {
     if (!drag?.ghost || state.drag !== drag) return;
-    updateGhost(x, y, drag);
-    const placement = getDropPlacement(x, y, drag);
-    if (placement) showPreview(drag.piece, placement);
-    else clearPreview();
+    const gridCell = getGridCellFromPoint(x, y);
+    if (!gridCell) {
+      drag.previewCellKey = '';
+      clearPreview();
+      return;
+    }
+    const cellKey = `${gridCell.row}:${gridCell.col}`;
+    if (drag.previewCellKey === cellKey) return;
+    drag.previewCellKey = cellKey;
+    const placement = getPlacementFromGridCell(drag.piece, gridCell.row, gridCell.col, { row: drag.grabRow, col: drag.grabCol });
+    showPreview(drag.piece, placement);
   }
 
   function handlePointerUp(event) {
@@ -551,8 +575,9 @@
       else clearTimeout(drag.frame);
       drag.frame = null;
     }
-    applyDragPosition(drag, drag.pendingX, drag.pendingY);
+    updateGhost(drag.pendingX, drag.pendingY, drag);
     const placement = getDropPlacement(drag.pendingX, drag.pendingY, drag);
+    drag.sourceItem?.releasePointerCapture?.(drag.pointerId);
     drag.ghost?.remove();
     state.drag = null;
     clearPreview();
@@ -561,11 +586,12 @@
   }
 
   function updateGhost(x, y, drag = state.drag) {
-    if (!state.drag?.ghost) return;
-    // Le fantôme conserve exactement l'offset de saisie, sans valeur fixe
-    // comme une compensation de barre de navigateur ou de hauteur d'écran.
-    state.drag.ghost.style.left = `${x - state.drag.grabOffsetX}px`;
-    state.drag.ghost.style.top = `${y - state.drag.grabOffsetY}px`;
+    if (!drag?.ghost) return;
+    // Le fantôme conserve exactement l'offset de saisie. transform est
+    // composité par le GPU et évite un nouveau layout à chaque mouvement.
+    const ghostX = x - drag.grabOffsetX;
+    const ghostY = y - drag.grabOffsetY;
+    drag.ghost.style.setProperty('transform', `translate3d(${ghostX}px, ${ghostY}px, 0)`, 'important');
   }
 
   function getBoardMetrics() {
@@ -575,9 +601,8 @@
     const firstCell = cells.find(cell => !cell.classList.contains('filled')) || cells[0];
     if (!firstCell) return null;
 
+    if (state.boardMetricsCache) return state.boardMetricsCache.value;
     const boardRect = board.getBoundingClientRect();
-    const signature = [boardRect.left, boardRect.top, boardRect.width, boardRect.height, board.children.length].join('|');
-    if (state.boardMetricsCache?.signature === signature) return state.boardMetricsCache.value;
     const measuredRect = firstCell.getBoundingClientRect();
     const boardStyle = getComputedStyle(board);
     const borderLeft = parseFloat(boardStyle.borderLeftWidth) || 0;
@@ -597,7 +622,7 @@
       gapX,
       gapY
     };
-    state.boardMetricsCache = { signature, value };
+    state.boardMetricsCache = { value };
     return value;
   }
 
@@ -678,15 +703,21 @@
     clearPreview();
     state.previewKey = previewKey;
     state.preview = piece.cells.map(([dr, dc]) => ({ row: row + dr, col: col + dc, valid }));
+    const boardCells = $('#board')?.children;
     state.preview.forEach(({ row: r, col: c, valid: ok }) => {
-      if (r >= 0 && r < GRID && c >= 0 && c < GRID) $('#board').children[r * GRID + c].classList.add(ok ? 'preview-valid' : 'preview-invalid');
+      if (boardCells && r >= 0 && r < GRID && c >= 0 && c < GRID) {
+        const cell = boardCells[r * GRID + c];
+        cell.classList.add(ok ? 'preview-valid' : 'preview-invalid');
+        state.previewNodes.push(cell);
+      }
     });
   }
 
   function clearPreview() {
+    state.previewNodes.forEach(cell => cell.classList.remove('preview-valid', 'preview-invalid'));
     state.preview = [];
+    state.previewNodes = [];
     state.previewKey = '';
-    $$('.cell.preview-valid, .cell.preview-invalid').forEach(cell => cell.classList.remove('preview-valid', 'preview-invalid'));
   }
 
   function createPieceVisual(piece, ghost = false) {
@@ -986,23 +1017,29 @@
       completed.cells.forEach(([r, c]) => { state.board[r][c] = null; });
       const clearVisualToken = ++state.clearVisualToken;
       state.clearVisualPending = true;
-      triggerClearEffect(completed.cells, pulseReady);
-      triggerBoardImpact(pulseReady ? 'pulse' : 'clear');
-      showClearFeedback(clearedLines);
-      spawnScorePopup(`+${formatNumber(clearScore)}`, pulseReady ? 'pulse' : 'clear', completed.cells);
-      if (state.combo > 1) {
-        spawnScorePopup(`COMBO ×${state.combo}`, 'combo', completed.cells, true);
-        renderHud();
-        retriggerClass($('#combo-badge'), 'combo-pop');
-      }
-      $('#game-message').textContent = pulseReady ? 'PULSE BURST ! La grille vient de surcharger.' : `${clearedLines} ligne${clearedLines > 1 ? 's' : ''} dissoute${clearedLines > 1 ? 's' : ''} !`;
-      showToast(pulseReady ? `PULSE BURST  ·  +${formatNumber(clearScore)} pts` : state.combo > 1 ? `Combo ×${state.combo}  ·  +${formatNumber(clearScore)} pts` : `Impulsion parfaite  ·  +${formatNumber(clearScore)} pts`);
-      const clearLevel = pulseReady || clearedLines >= 3 ? 3 : clearedLines >= 2 ? 2 : 1;
-      playSfx(clearLevel >= 3 ? 'multi-clear' : clearedLines >= 2 ? 'multi-clear' : 'clear', clearLevel);
-      if (state.combo > 1) playSfx('combo', Math.min(4, state.combo));
-      const clearHaptic = state.combo >= 3 ? [18, 8, 18, 8, 34] : clearLevel >= 3 ? [24, 12, 42] : clearLevel === 2 ? [18, 10, 30] : 14;
-      vibrate(clearHaptic);
+      // Le modèle est déjà nettoyé : on libère immédiatement la prochaine
+      // pièce avant les effets décoratifs et audio.
       releaseTurnAfterClear();
+      const clearLevel = pulseReady || clearedLines >= 3 ? 3 : clearedLines >= 2 ? 2 : 1;
+      const clearHaptic = state.combo >= 3 ? [18, 8, 18, 8, 34] : clearLevel >= 3 ? [24, 12, 42] : clearLevel === 2 ? [18, 10, 30] : 14;
+      const runClearFeedback = () => {
+        triggerClearEffect(completed.cells, pulseReady);
+        triggerBoardImpact(pulseReady ? 'pulse' : 'clear');
+        showClearFeedback(clearedLines);
+        spawnScorePopup(`+${formatNumber(clearScore)}`, pulseReady ? 'pulse' : 'clear', completed.cells);
+        if (state.combo > 1) {
+          spawnScorePopup(`COMBO ×${state.combo}`, 'combo', completed.cells, true);
+          renderHud();
+          retriggerClass($('#combo-badge'), 'combo-pop');
+        }
+        $('#game-message').textContent = pulseReady ? 'PULSE BURST ! La grille vient de surcharger.' : `${clearedLines} ligne${clearedLines > 1 ? 's' : ''} dissoute${clearedLines > 1 ? 's' : ''} !`;
+        showToast(pulseReady ? `PULSE BURST  ·  +${formatNumber(clearScore)} pts` : state.combo > 1 ? `Combo ×${state.combo}  ·  +${formatNumber(clearScore)} pts` : `Impulsion parfaite  ·  +${formatNumber(clearScore)} pts`);
+        playSfx(clearLevel >= 3 ? 'multi-clear' : clearedLines >= 2 ? 'multi-clear' : 'clear', clearLevel);
+        if (state.combo > 1) playSfx('combo', Math.min(4, state.combo));
+        vibrate(clearHaptic);
+      };
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(runClearFeedback);
+      else setTimeout(runClearFeedback, 0);
       setTimeout(() => finishClear(clearVisualToken), pulseReady ? 320 : 230);
     } else {
       state.combo = 0; updateMission('score', state.score); finishTurn();
