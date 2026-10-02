@@ -343,7 +343,8 @@
   function bindEvents() {
     document.addEventListener('click', handleClick);
     document.addEventListener('pointerdown', handlePointerDown, { passive: false });
-    document.addEventListener('pointermove', handlePointerMove, { passive: false });
+    const moveEvent = typeof window !== 'undefined' && 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove';
+    document.addEventListener(moveEvent, handlePointerMove, { passive: false });
     document.addEventListener('pointerup', handlePointerUp, { passive: false });
     document.addEventListener('pointercancel', cancelDrag, { passive: false });
     window.addEventListener('blur', cancelDrag);
@@ -428,12 +429,17 @@
     }
   }
 
+  function removeDragGhost(ghost) {
+    if (!ghost) return;
+    ghost.style.willChange = 'auto';
+    ghost.remove();
+  }
+
   function cancelDrag() {
     if (!state.drag) return;
-    cancelScheduledFrame(state.drag.frame);
     cancelScheduledFrame(state.drag.previewFrame);
     state.drag.sourceItem?.releasePointerCapture?.(state.drag.pointerId);
-    state.drag.ghost?.remove();
+    removeDragGhost(state.drag.ghost);
     state.drag = null;
     state.suppressPieceClick = false;
     clearPreview();
@@ -507,6 +513,7 @@
 
     const ghost = createPieceVisual(piece, true);
     ghost.classList.add('drag-ghost');
+    ghost.style.willChange = 'transform';
     ghost.style.setProperty('--drag-cell-width', `${dragCellWidth}px`);
     ghost.style.setProperty('--drag-cell-height', `${dragCellHeight}px`);
     ghost.style.setProperty('--drag-gap-x', `${dragGapX}px`);
@@ -525,7 +532,6 @@
       pendingX: event.clientX,
       pendingY: event.clientY,
       previewCellKey: '',
-      frame: null,
       previewFrame: null
     };
     item.setPointerCapture?.(event.pointerId);
@@ -538,28 +544,28 @@
   }
 
   function handlePointerMove(event) {
-    if (!state.drag || event.pointerId !== state.drag.pointerId) return;
-    event.preventDefault();
     const drag = state.drag;
-    drag.pendingX = event.clientX; drag.pendingY = event.clientY;
-    // Aucun calcul de layout ici : on ne fait que mémoriser la dernière
-    // position. La position visuelle et la preview sont appliquées ensemble
-    // juste avant le prochain paint.
-    if (drag.frame !== null) return;
-    const paint = () => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+
+    // Priorité absolue : le ghost bouge dans le même événement que le doigt.
+    // Aucun cache DOM, preview ou calcul de grille ne doit passer avant ceci.
+    updateGhost(event.clientX, event.clientY, drag);
+    let latestEvent = event;
+    try {
+      const coalesced = event.getCoalescedEvents?.();
+      if (coalesced?.length) latestEvent = coalesced[coalesced.length - 1];
+    } catch (_) { /* API facultative */ }
+    if (latestEvent !== event) updateGhost(latestEvent.clientX, latestEvent.clientY, drag);
+    drag.pendingX = latestEvent.clientX; drag.pendingY = latestEvent.clientY;
+    event.preventDefault();
+
+    // La preview est secondaire et ne peut jamais retarder le déplacement.
+    if (drag.previewFrame !== null) return;
+    drag.previewFrame = scheduleFrame(() => {
       if (!state.drag || state.drag !== drag) return;
-      drag.frame = null;
-      const x = drag.pendingX; const y = drag.pendingY;
-      updateGhost(x, y, drag);
-      // La preview est volontairement reléguée à la frame suivante : le
-      // fantôme est peint en priorité, même si le calcul de grille coûte plus.
-      if (drag.previewFrame === null) drag.previewFrame = scheduleFrame(() => {
-        if (!state.drag || state.drag !== drag) return;
-        drag.previewFrame = null;
-        updateDragPreview(drag, drag.pendingX, drag.pendingY);
-      });
-    };
-    drag.frame = scheduleFrame(paint);
+      drag.previewFrame = null;
+      updateDragPreview(drag, drag.pendingX, drag.pendingY);
+    });
   }
 
   function updateDragPreview(drag, x, y) {
@@ -582,14 +588,12 @@
     event.preventDefault();
     const drag = state.drag;
     drag.pendingX = event.clientX; drag.pendingY = event.clientY;
-    cancelScheduledFrame(drag.frame);
     cancelScheduledFrame(drag.previewFrame);
-    drag.frame = null;
     drag.previewFrame = null;
     updateGhost(drag.pendingX, drag.pendingY, drag);
     const placement = getDropPlacement(drag.pendingX, drag.pendingY, drag);
     drag.sourceItem?.releasePointerCapture?.(drag.pointerId);
-    drag.ghost?.remove();
+    removeDragGhost(drag.ghost);
     state.drag = null;
     clearPreview();
     if (placement?.valid) placePiece(drag.index, placement.row, placement.col);

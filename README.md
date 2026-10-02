@@ -32,7 +32,7 @@ Puis ouvre `http://localhost:8000` sur l'ordinateur, ou l'adresse IP locale depu
 - Génération pondérée et consciente de la grille : opportunités de lignes proches favorisées, hasard conservé et fragments impossibles écartés autant que possible.
 - Nouvelles formes occasionnelles 2 × 3 et 3 × 3, utiles pour les gros nettoyages mais risquées dans les espaces serrés.
 - Drag-and-drop optimisé pour mobile : capture du pointer, fantôme déplacé en `translate3d` côté GPU, sans transition de position.
-- `pointermove` ne fait plus que mémoriser la dernière position ; un seul `requestAnimationFrame` applique le déplacement visuel, puis la preview est traitée en seconde priorité.
+- Le ghost est déplacé immédiatement dans `pointerrawupdate` quand disponible, sinon dans `pointermove`, avec `translate3d` et sans interpolation ; la preview reste secondaire dans `requestAnimationFrame`.
 - Les dimensions de la grille, de la pièce et les offsets sont mesurés au début du drag ; aucun `getBoundingClientRect()` n'est appelé pendant les mouvements.
 - Placement logique immédiat : la pièce suivante est disponible sans attendre la fin des effets de destruction.
 - Hiérarchie de vibrations et d'impacts courts pour la prise, le placement, les lignes, les multi-lignes, les combos et les records.
