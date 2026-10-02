@@ -9,6 +9,12 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const formatNumber = value => new Intl.NumberFormat('fr-FR').format(Math.round(value || 0));
+  const scheduleFrame = callback => typeof requestAnimationFrame === 'function' ? requestAnimationFrame(callback) : setTimeout(callback, 16);
+  const cancelScheduledFrame = frame => {
+    if (frame === null || frame === undefined) return;
+    if (typeof cancelAnimationFrame === 'function' && typeof requestAnimationFrame === 'function') cancelAnimationFrame(frame);
+    else clearTimeout(frame);
+  };
 
   const SHAPE_LIBRARY = [
     { id: 'dot', cells: [[0, 0]] },
@@ -424,10 +430,8 @@
 
   function cancelDrag() {
     if (!state.drag) return;
-    if (state.drag.frame !== null) {
-      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(state.drag.frame);
-      else clearTimeout(state.drag.frame);
-    }
+    cancelScheduledFrame(state.drag.frame);
+    cancelScheduledFrame(state.drag.previewFrame);
     state.drag.sourceItem?.releasePointerCapture?.(state.drag.pointerId);
     state.drag.ghost?.remove();
     state.drag = null;
@@ -521,7 +525,8 @@
       pendingX: event.clientX,
       pendingY: event.clientY,
       previewCellKey: '',
-      frame: null
+      frame: null,
+      previewFrame: null
     };
     item.setPointerCapture?.(event.pointerId);
     document.body.appendChild(ghost);
@@ -529,8 +534,7 @@
     const playSelectSound = () => {
       if (state.drag?.pointerId === event.pointerId) playSfx('select');
     };
-    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(playSelectSound);
-    else setTimeout(playSelectSound, 0);
+    scheduleFrame(playSelectSound);
   }
 
   function handlePointerMove(event) {
@@ -538,16 +542,24 @@
     event.preventDefault();
     const drag = state.drag;
     drag.pendingX = event.clientX; drag.pendingY = event.clientY;
-    // Le fantôme suit le doigt immédiatement sur le thread de composition;
-    // seul le calcul de preview est regroupé sur la prochaine frame.
-    updateGhost(event.clientX, event.clientY, drag);
+    // Aucun calcul de layout ici : on ne fait que mémoriser la dernière
+    // position. La position visuelle et la preview sont appliquées ensemble
+    // juste avant le prochain paint.
     if (drag.frame !== null) return;
     const paint = () => {
       if (!state.drag || state.drag !== drag) return;
       drag.frame = null;
-      updateDragPreview(drag, drag.pendingX, drag.pendingY);
+      const x = drag.pendingX; const y = drag.pendingY;
+      updateGhost(x, y, drag);
+      // La preview est volontairement reléguée à la frame suivante : le
+      // fantôme est peint en priorité, même si le calcul de grille coûte plus.
+      if (drag.previewFrame === null) drag.previewFrame = scheduleFrame(() => {
+        if (!state.drag || state.drag !== drag) return;
+        drag.previewFrame = null;
+        updateDragPreview(drag, drag.pendingX, drag.pendingY);
+      });
     };
-    drag.frame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(paint) : setTimeout(paint, 16);
+    drag.frame = scheduleFrame(paint);
   }
 
   function updateDragPreview(drag, x, y) {
@@ -570,11 +582,10 @@
     event.preventDefault();
     const drag = state.drag;
     drag.pendingX = event.clientX; drag.pendingY = event.clientY;
-    if (drag.frame !== null) {
-      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drag.frame);
-      else clearTimeout(drag.frame);
-      drag.frame = null;
-    }
+    cancelScheduledFrame(drag.frame);
+    cancelScheduledFrame(drag.previewFrame);
+    drag.frame = null;
+    drag.previewFrame = null;
     updateGhost(drag.pendingX, drag.pendingY, drag);
     const placement = getDropPlacement(drag.pendingX, drag.pendingY, drag);
     drag.sourceItem?.releasePointerCapture?.(drag.pointerId);
@@ -591,17 +602,16 @@
     // composité par le GPU et évite un nouveau layout à chaque mouvement.
     const ghostX = x - drag.grabOffsetX;
     const ghostY = y - drag.grabOffsetY;
-    drag.ghost.style.setProperty('transform', `translate3d(${ghostX}px, ${ghostY}px, 0)`, 'important');
+    drag.ghost.style.transform = `translate3d(${ghostX}px, ${ghostY}px, 0)`;
   }
 
   function getBoardMetrics() {
+    if (state.boardMetricsCache) return state.boardMetricsCache.value;
     const board = $('#board');
     if (!board || !board.children.length) return null;
-    const cells = [...board.children];
-    const firstCell = cells.find(cell => !cell.classList.contains('filled')) || cells[0];
+    const firstCell = [...board.children].find(cell => !cell.classList.contains('filled')) || board.children[0];
     if (!firstCell) return null;
 
-    if (state.boardMetricsCache) return state.boardMetricsCache.value;
     const boardRect = board.getBoundingClientRect();
     const measuredRect = firstCell.getBoundingClientRect();
     const boardStyle = getComputedStyle(board);

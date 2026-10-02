@@ -31,8 +31,9 @@ Puis ouvre `http://localhost:8000` sur l'ordinateur, ou l'adresse IP locale depu
 - Prévisualisation des cases proches d'une ligne complète et placement tactile centré plus naturel.
 - Génération pondérée et consciente de la grille : opportunités de lignes proches favorisées, hasard conservé et fragments impossibles écartés autant que possible.
 - Nouvelles formes occasionnelles 2 × 3 et 3 × 3, utiles pour les gros nettoyages mais risquées dans les espaces serrés.
-- Drag-and-drop optimisé pour mobile : capture du pointer, fantôme déplacé en `translate3d` côté GPU, métriques de plateau mises en cache et preview regroupée par `requestAnimationFrame`.
-- Le fantôme suit le doigt immédiatement ; seuls les calculs de grille sont limités à une frame pour conserver la sensation de Block Blast.
+- Drag-and-drop optimisé pour mobile : capture du pointer, fantôme déplacé en `translate3d` côté GPU, sans transition de position.
+- `pointermove` ne fait plus que mémoriser la dernière position ; un seul `requestAnimationFrame` applique le déplacement visuel, puis la preview est traitée en seconde priorité.
+- Les dimensions de la grille, de la pièce et les offsets sont mesurés au début du drag ; aucun `getBoundingClientRect()` n'est appelé pendant les mouvements.
 - Placement logique immédiat : la pièce suivante est disponible sans attendre la fin des effets de destruction.
 - Hiérarchie de vibrations et d'impacts courts pour la prise, le placement, les lignes, les multi-lignes, les combos et les records.
 - Scoring renforcé pour les gros fragments, les multi-lignes et les combos.
