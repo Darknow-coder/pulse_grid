@@ -29,7 +29,13 @@ Puis ouvre `http://localhost:8000` sur l'ordinateur, ou l'adresse IP locale depu
 - Début de partie guidé par des fragments simples avant de revenir à la génération pondérée.
 - Charge Pulse progressive : une surcharge déclenche une Pulse Burst avec bonus de score et de particules.
 - Prévisualisation des cases proches d'une ligne complète et placement tactile centré plus naturel.
-- Génération pondérée des fragments pour limiter les situations injustes.
+- Génération pondérée et consciente de la grille : opportunités de lignes proches favorisées, hasard conservé et fragments impossibles écartés autant que possible.
+- Nouvelles formes occasionnelles 2 × 3 et 3 × 3, utiles pour les gros nettoyages mais risquées dans les espaces serrés.
+- Drag-and-drop optimisé avec métriques de plateau mises en cache et calculs de déplacement regroupés par `requestAnimationFrame`.
+- Placement logique immédiat : la pièce suivante est disponible sans attendre la fin des effets de destruction.
+- Hiérarchie de vibrations et d'impacts courts pour la prise, le placement, les lignes, les multi-lignes, les combos et les records.
+- Scoring renforcé pour les gros fragments, les multi-lignes et les combos.
+- Particules volontairement limitées pour préserver la fluidité sur les téléphones Android moyens.
 - Fin de partie, meilleur score et bouton rejouer.
 - Niveau, XP, récompense de niveau et statistiques cumulées.
 - Route de progression verticale avec milestones, récompenses récupérables et déblocages reliés à la collection.

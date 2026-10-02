@@ -17,6 +17,8 @@
     { id: 'tri-h', cells: [[0, 0], [0, 1], [0, 2]] },
     { id: 'tri-v', cells: [[0, 0], [1, 0], [2, 0]] },
     { id: 'square', cells: [[0, 0], [0, 1], [1, 0], [1, 1]] },
+    { id: 'rect-2x3', cells: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2]] },
+    { id: 'rect-3x3', cells: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [1, 2], [2, 0], [2, 1], [2, 2]] },
     { id: 'l-small', cells: [[0, 0], [1, 0], [1, 1]] },
     { id: 'l-big', cells: [[0, 0], [1, 0], [2, 0], [2, 1]] },
     { id: 't', cells: [[0, 0], [0, 1], [0, 2], [1, 1]] },
@@ -33,6 +35,8 @@
     'tri-h': { primary: '#ffe08a', secondary: '#ff9b70', soft: 'rgba(255,209,122,.3)' },
     'tri-v': { primary: '#a6f58c', secondary: '#38cba7', soft: 'rgba(143,240,187,.28)' },
     square: { primary: '#ffadca', secondary: '#ff5d91', soft: 'rgba(255,127,158,.28)' },
+    'rect-2x3': { primary: '#ffd17a', secondary: '#ff7f9e', soft: 'rgba(255,209,122,.28)' },
+    'rect-3x3': { primary: '#c4f36d', secondary: '#53d99d', soft: 'rgba(196,243,109,.28)' },
     'l-small': { primary: '#91d9ff', secondary: '#558cff', soft: 'rgba(110,184,255,.28)' },
     'l-big': { primary: '#d1f878', secondary: '#54d99d', soft: 'rgba(196,243,109,.28)' },
     t: { primary: '#e4a5ff', secondary: '#9472ff', soft: 'rgba(224,154,255,.28)' },
@@ -147,6 +151,7 @@
     selectedPiece: null,
     drag: null,
     preview: [],
+    previewKey: '',
     resolving: false,
     gameActive: false,
     paused: false,
@@ -154,6 +159,9 @@
     toastTimer: null,
     clearFeedbackTimer: null,
     highScoreTimer: null,
+    clearVisualPending: false,
+    clearVisualToken: 0,
+    boardMetricsCache: null,
     suppressPieceClick: false
   };
 
@@ -213,19 +221,49 @@
 
   function occupiedCount() { return state.board.flat().filter(Boolean).length; }
 
+  function evaluateShapeOpportunity(def) {
+    const piece = makePiece(def);
+    let bestClear = 0; let bestNear = 0; let bestPotential = 0;
+    for (let row = 0; row < GRID; row++) for (let col = 0; col < GRID; col++) {
+      if (!canPlace(piece, row, col)) continue;
+      let clear = 0; let near = 0;
+      for (let r = 0; r < GRID; r++) {
+        let filled = state.board[r].filter(Boolean).length;
+        piece.cells.forEach(([dr, dc]) => { if (row + dr === r) filled += 1; });
+        if (filled >= GRID) clear += 1;
+        else if (filled === GRID - 1) near += 1;
+      }
+      for (let c = 0; c < GRID; c++) {
+        let filled = state.board.reduce((sum, currentRow) => sum + (currentRow[c] ? 1 : 0), 0);
+        piece.cells.forEach(([dr, dc]) => { if (col + dc === c) filled += 1; });
+        if (filled >= GRID) clear += 1;
+        else if (filled === GRID - 1) near += 1;
+      }
+      bestClear = Math.max(bestClear, clear);
+      bestNear = Math.max(bestNear, near);
+      bestPotential = Math.max(bestPotential, clear * 5 + near * 1.25);
+    }
+    return { bestClear, bestNear, bestPotential };
+  }
+
   function chooseShapeDefinition() {
     const density = occupiedCount() / (GRID * GRID);
     const opening = state.turn < 6 && occupiedCount() < 24;
     const weights = SHAPE_LIBRARY.map(def => {
       const size = def.cells.length;
+      const opportunity = evaluateShapeOpportunity(def);
       let weight = 1;
       if (density > .5 && size <= 3) weight += 2.6;
       if (density > .68 && size <= 2) weight += 2.5;
       if (!opening && density < .22 && size >= 4) weight += .8;
       if (opening && size <= 4) weight += 2.2;
       if (opening && size >= 5) weight *= .25;
-      if (size === 5 && density > .4) weight -= .35;
-      return Math.max(.15, weight);
+      if (size >= 6 && density > .42) weight *= .32;
+      if (opportunity.bestClear >= 1) weight += Math.min(4.5, opportunity.bestClear * 1.8);
+      if (opportunity.bestClear >= 2) weight += 2.5;
+      if (opportunity.bestNear >= 2) weight += Math.min(3, opportunity.bestNear * .55);
+      if (opportunity.bestPotential === 0 && density > .58) weight *= .7;
+      return Math.max(.12, weight);
     });
     const total = weights.reduce((a, b) => a + b, 0);
     let roll = Math.random() * total;
@@ -254,7 +292,7 @@
   function generatePiece() {
     for (let attempt = 0; attempt < 12; attempt++) {
       const piece = makePiece(chooseShapeDefinition());
-      if (occupiedCount() < 46 || canAnyPlace(piece)) return piece;
+      if (canAnyPlace(piece)) return piece;
     }
     const fallback = SHAPE_LIBRARY.slice(0, 3).map(makePiece).find(canAnyPlace);
     return fallback || makePiece(SHAPE_LIBRARY[0]);
@@ -381,6 +419,10 @@
 
   function cancelDrag() {
     if (!state.drag) return;
+    if (state.drag.frame !== null) {
+      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(state.drag.frame);
+      else clearTimeout(state.drag.frame);
+    }
     state.drag.ghost?.remove();
     state.drag = null;
     state.suppressPieceClick = false;
@@ -468,7 +510,10 @@
       grabOffsetX: ghostOffsetX,
       grabOffsetY: ghostOffsetY,
       grabCol,
-      grabRow
+      grabRow,
+      pendingX: event.clientX,
+      pendingY: event.clientY,
+      frame: null
     };
     document.body.appendChild(ghost);
     updateGhost(event.clientX, event.clientY);
@@ -477,9 +522,22 @@
   function handlePointerMove(event) {
     if (!state.drag || event.pointerId !== state.drag.pointerId) return;
     event.preventDefault();
-    updateGhost(event.clientX, event.clientY);
-    const placement = getDropPlacement(event.clientX, event.clientY, state.drag);
-    if (placement) showPreview(state.drag.piece, placement);
+    const drag = state.drag;
+    drag.pendingX = event.clientX; drag.pendingY = event.clientY;
+    if (drag.frame !== null) return;
+    const paint = () => {
+      if (!state.drag || state.drag !== drag) return;
+      drag.frame = null;
+      applyDragPosition(drag, drag.pendingX, drag.pendingY);
+    };
+    drag.frame = typeof requestAnimationFrame === 'function' ? requestAnimationFrame(paint) : setTimeout(paint, 16);
+  }
+
+  function applyDragPosition(drag, x, y) {
+    if (!drag?.ghost || state.drag !== drag) return;
+    updateGhost(x, y, drag);
+    const placement = getDropPlacement(x, y, drag);
+    if (placement) showPreview(drag.piece, placement);
     else clearPreview();
   }
 
@@ -487,7 +545,14 @@
     if (!state.drag || event.pointerId !== state.drag.pointerId) return;
     event.preventDefault();
     const drag = state.drag;
-    const placement = getDropPlacement(event.clientX, event.clientY, drag);
+    drag.pendingX = event.clientX; drag.pendingY = event.clientY;
+    if (drag.frame !== null) {
+      if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drag.frame);
+      else clearTimeout(drag.frame);
+      drag.frame = null;
+    }
+    applyDragPosition(drag, drag.pendingX, drag.pendingY);
+    const placement = getDropPlacement(drag.pendingX, drag.pendingY, drag);
     drag.ghost?.remove();
     state.drag = null;
     clearPreview();
@@ -495,7 +560,7 @@
     else renderTray();
   }
 
-  function updateGhost(x, y) {
+  function updateGhost(x, y, drag = state.drag) {
     if (!state.drag?.ghost) return;
     // Le fantôme conserve exactement l'offset de saisie, sans valeur fixe
     // comme une compensation de barre de navigateur ou de hauteur d'écran.
@@ -511,6 +576,8 @@
     if (!firstCell) return null;
 
     const boardRect = board.getBoundingClientRect();
+    const signature = [boardRect.left, boardRect.top, boardRect.width, boardRect.height, board.children.length].join('|');
+    if (state.boardMetricsCache?.signature === signature) return state.boardMetricsCache.value;
     const measuredRect = firstCell.getBoundingClientRect();
     const boardStyle = getComputedStyle(board);
     const borderLeft = parseFloat(boardStyle.borderLeftWidth) || 0;
@@ -521,7 +588,7 @@
     const gapX = parseFloat(boardStyle.columnGap) || fallbackGap;
     const gapY = parseFloat(boardStyle.rowGap) || fallbackGap;
 
-    return {
+    const value = {
       rect: boardRect,
       originX: boardRect.left + borderLeft + paddingLeft,
       originY: boardRect.top + borderTop + paddingTop,
@@ -530,6 +597,8 @@
       gapX,
       gapY
     };
+    state.boardMetricsCache = { signature, value };
+    return value;
   }
 
   function getGridCellFromPoint(clientX, clientY) {
@@ -602,9 +671,12 @@
   }
 
   function showPreview(piece, placement) {
-    clearPreview();
     if (!piece || !placement) return;
     const { row, col, valid } = placement;
+    const previewKey = `${piece.id}:${row}:${col}:${valid ? 1 : 0}`;
+    if (state.previewKey === previewKey) return;
+    clearPreview();
+    state.previewKey = previewKey;
     state.preview = piece.cells.map(([dr, dc]) => ({ row: row + dr, col: col + dc, valid }));
     state.preview.forEach(({ row: r, col: c, valid: ok }) => {
       if (r >= 0 && r < GRID && c >= 0 && c < GRID) $('#board').children[r * GRID + c].classList.add(ok ? 'preview-valid' : 'preview-invalid');
@@ -613,6 +685,7 @@
 
   function clearPreview() {
     state.preview = [];
+    state.previewKey = '';
     $$('.cell.preview-valid, .cell.preview-invalid').forEach(cell => cell.classList.remove('preview-valid', 'preview-invalid'));
   }
 
@@ -636,6 +709,7 @@
   function renderBoard() {
     const board = $('#board');
     if (!board) return;
+    state.boardMetricsCache = null;
     if (board.children.length !== GRID * GRID) {
       board.innerHTML = '';
       for (let i = 0; i < GRID * GRID; i++) {
@@ -714,14 +788,14 @@
 
   function animateTrayArrival() {
     $$('#piece-tray .piece-item').forEach((item, index) => {
-      item.style.setProperty('--tray-delay', `${index * 55}ms`);
+      item.style.setProperty('--tray-delay', `${index * 20}ms`);
       retriggerClass(item, 'tray-arrive');
     });
   }
 
   function animateBoosterArrival() {
     $$('#booster-bar .booster-button').forEach((button, index) => {
-      button.style.setProperty('--booster-delay', `${index * 55}ms`);
+      button.style.setProperty('--booster-delay', `${index * 20}ms`);
       retriggerClass(button, 'booster-arrive');
     });
   }
@@ -730,9 +804,9 @@
     cells.forEach(([row, col], index) => {
       const cell = $('#board').children[row * GRID + col];
       if (!cell) return;
-      cell.style.setProperty('--landing-delay', `${Math.min(index * 24, 120)}ms`);
+      cell.style.setProperty('--landing-delay', `${Math.min(index * 8, 40)}ms`);
       retriggerClass(cell, 'landing');
-      setTimeout(() => cell.style.removeProperty('--landing-delay'), 520);
+      setTimeout(() => cell.style.removeProperty('--landing-delay'), 260);
     });
   }
 
@@ -829,7 +903,7 @@
     $('#high-score-feedback')?.setAttribute('aria-hidden', 'true');
     $('#clear-feedback')?.classList.remove('show');
     $('#clear-feedback')?.setAttribute('aria-hidden', 'true');
-    state.screen = 'game'; state.board = createEmptyBoard(); state.turn = 0; state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.recordAnnounced = false; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.gameActive = true; state.paused = false;
+    state.screen = 'game'; state.board = createEmptyBoard(); state.turn = 0; state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.recordAnnounced = false; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.clearVisualPending = false; state.clearVisualToken += 1; state.gameActive = true; state.paused = false;
     showScreen('game'); renderBoard(); renderTray(); renderHud(); renderBoosters(); animateTrayArrival(); animateBoosterArrival(); $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.'; vibrate(8); playSfx('start');
   }
 
@@ -862,7 +936,8 @@
   }
 
   function calculatePlacementScore(piece) {
-    return piece.cells.length * 10;
+    const sizeBonus = Math.max(0, piece.cells.length - 3) * 12;
+    return piece.cells.length * 10 + sizeBonus;
   }
 
   // Barème volontairement lisible : 100 pts par ligne, un bonus par case
@@ -870,10 +945,11 @@
   // colonne ne sont comptées qu'une seule fois dans completed.cells.
   function calculateClearScore(completed, combo, pulseBonus = 0) {
     const lineCount = completed.rows.length + completed.cols.length;
-    const lineScore = lineCount * 100;
+    const lineScore = lineCount * 100 + Math.max(0, lineCount - 1) ** 2 * 45;
     const clearedCellScore = completed.cells.length * 15;
-    const comboScore = Math.max(0, combo - 1) * 70;
-    return lineScore + clearedCellScore + comboScore + pulseBonus;
+    const comboScore = Math.max(0, combo - 1) * 80 + Math.max(0, combo - 2) * 35;
+    const comboMultiplier = 1 + Math.min(.4, Math.max(0, combo - 1) * .08);
+    return Math.round((lineScore + clearedCellScore + comboScore) * comboMultiplier + pulseBonus);
   }
 
   function placePiece(index, row, col) {
@@ -907,6 +983,9 @@
       if (state.combo > profile.stats.bestCombo) profile.stats.bestCombo = state.combo;
       updateMission('lines', clearedLines); updateMission('combo', state.combo); updateMission('score', state.score);
       markCellsClearing(completed.cells);
+      completed.cells.forEach(([r, c]) => { state.board[r][c] = null; });
+      const clearVisualToken = ++state.clearVisualToken;
+      state.clearVisualPending = true;
       triggerClearEffect(completed.cells, pulseReady);
       triggerBoardImpact(pulseReady ? 'pulse' : 'clear');
       showClearFeedback(clearedLines);
@@ -921,10 +1000,12 @@
       const clearLevel = pulseReady || clearedLines >= 3 ? 3 : clearedLines >= 2 ? 2 : 1;
       playSfx(clearLevel >= 3 ? 'multi-clear' : clearedLines >= 2 ? 'multi-clear' : 'clear', clearLevel);
       if (state.combo > 1) playSfx('combo', Math.min(4, state.combo));
-      vibrate(clearLevel >= 3 ? [24, 12, 42] : clearLevel === 2 ? [18, 10, 30] : 14);
-      setTimeout(() => finishClear(completed), pulseReady ? 440 : 300);
+      const clearHaptic = state.combo >= 3 ? [18, 8, 18, 8, 34] : clearLevel >= 3 ? [24, 12, 42] : clearLevel === 2 ? [18, 10, 30] : 14;
+      vibrate(clearHaptic);
+      releaseTurnAfterClear();
+      setTimeout(() => finishClear(clearVisualToken), pulseReady ? 320 : 230);
     } else {
-      state.combo = 0; updateMission('score', state.score); setTimeout(finishTurn, 110);
+      state.combo = 0; updateMission('score', state.score); finishTurn();
     }
     if (profile.best > 0 && !state.recordAnnounced && scoreBeforeMove <= profile.best && state.score > profile.best) {
       state.recordAnnounced = true;
@@ -941,20 +1022,31 @@
     cells.forEach(([r, c], index) => {
       const cell = $('#board').children[r * GRID + c];
       if (!cell) return;
-      cell.style.setProperty('--clear-delay', `${Math.min(index * 12, 120)}ms`);
+      cell.style.setProperty('--clear-delay', `${Math.min(index * 5, 40)}ms`);
       cell.classList.add('clearing');
     });
   }
 
-  function finishClear(completed) {
-    completed.cells.forEach(([r, c]) => { state.board[r][c] = null; });
-    finishTurn();
+  function releaseTurnAfterClear() {
+    if (!state.gameActive) return;
+    if (state.queue.every(piece => !piece)) { state.queue = generateQueue(); }
+    state.resolving = false;
+    renderTray(); renderHud();
+    const playable = state.queue.some(piece => piece && canAnyPlace(piece));
+    if (!playable) endGame();
+    else { $('#game-message').textContent = state.combo > 1 ? `Le rythme est lancé : combo ×${state.combo}.` : 'À toi de jouer. Trouve le prochain espace.'; saveProfile(); }
+  }
+
+  function finishClear(clearVisualToken) {
+    if (clearVisualToken !== state.clearVisualToken || !state.clearVisualPending) return;
+    state.clearVisualPending = false;
+    renderBoard();
   }
 
   function finishTurn() {
     if (!state.gameActive) return;
     if (state.queue.every(piece => !piece)) { state.queue = generateQueue(); }
-    state.resolving = false; renderBoard(); renderTray(); renderHud();
+    state.resolving = false; state.clearVisualPending = false; renderBoard(); renderTray(); renderHud();
     const playable = state.queue.some(piece => piece && canAnyPlace(piece));
     if (!playable) endGame();
     else { $('#game-message').textContent = state.combo > 1 ? `Le rythme est lancé : combo ×${state.combo}.` : 'À toi de jouer. Trouve le prochain espace.'; saveProfile(); }
@@ -1272,8 +1364,8 @@
     const layer = $('#fx-layer'); if (!layer) return;
     const effect = profile.equipped.effect;
     const particleCells = pulseBurst
-      ? Array.from({ length: Math.min(64, cells.length * 3) }, (_, index) => cells[index % cells.length])
-      : cells.slice(0, 24);
+      ? Array.from({ length: Math.min(36, cells.length * 2) }, (_, index) => cells[index % cells.length])
+      : cells.slice(0, 16);
     particleCells.forEach(([r, c], index) => {
       const particle = document.createElement('i');
       const type = pulseBurst ? 'pulse-particle' : effect === 'ring' ? 'ring' : effect === 'confetti' ? 'round' : '';
@@ -1319,7 +1411,7 @@
   function spawnFeedbackParticles(level) {
     const layer = $('#fx-layer');
     if (!layer) return;
-    const amount = level >= 4 ? 22 : level === 3 ? 16 : level === 2 ? 11 : 7;
+    const amount = level >= 4 ? 14 : level === 3 ? 11 : level === 2 ? 8 : 5;
     for (let index = 0; index < amount; index++) {
       const particle = document.createElement('i');
       particle.className = `fx-particle feedback-particle${level >= 3 ? ' feedback-particle-big' : ''}${level >= 4 && index % 2 === 0 ? ' feedback-particle-hot' : ''}`;
