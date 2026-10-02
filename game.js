@@ -511,13 +511,10 @@
     clearPreview();
     $('#game-message').textContent = 'Touche la grille pour déposer ce fragment.';
 
-    const ghost = createPieceVisual(piece, true);
-    ghost.classList.add('drag-ghost');
-    ghost.style.willChange = 'transform';
-    ghost.style.setProperty('--drag-cell-width', `${dragCellWidth}px`);
-    ghost.style.setProperty('--drag-cell-height', `${dragCellHeight}px`);
-    ghost.style.setProperty('--drag-gap-x', `${dragGapX}px`);
-    ghost.style.setProperty('--drag-gap-y', `${dragGapY}px`);
+    // Ghost mobile ultra-léger : un seul canvas au lieu d'un arbre de divs.
+    // Le canvas est dessiné une seule fois au début du drag ; ensuite seul son
+    // transform change, ce qui réduit fortement le travail de paint du navigateur.
+    const ghost = createDragGhostCanvas(piece, dragCellWidth, dragCellHeight, dragGapX, dragGapY);
 
     state.drag = {
       pointerId: event.pointerId,
@@ -547,16 +544,18 @@
     const drag = state.drag;
     if (!drag || event.pointerId !== drag.pointerId) return;
 
-    // Priorité absolue : le ghost bouge dans le même événement que le doigt.
-    // Aucun cache DOM, preview ou calcul de grille ne doit passer avant ceci.
-    updateGhost(event.clientX, event.clientY, drag);
+    // Utilise uniquement le point le plus récent disponible, puis effectue
+    // UNE seule écriture de transform. Aucun smoothing ni interpolation.
     let latestEvent = event;
     try {
       const coalesced = event.getCoalescedEvents?.();
       if (coalesced?.length) latestEvent = coalesced[coalesced.length - 1];
     } catch (_) { /* API facultative */ }
-    if (latestEvent !== event) updateGhost(latestEvent.clientX, latestEvent.clientY, drag);
-    drag.pendingX = latestEvent.clientX; drag.pendingY = latestEvent.clientY;
+
+    // Priorité absolue : le ghost bouge dans le même événement que le doigt.
+    updateGhost(latestEvent.clientX, latestEvent.clientY, drag);
+    drag.pendingX = latestEvent.clientX;
+    drag.pendingY = latestEvent.clientY;
     event.preventDefault();
 
     // La preview est secondaire et ne peut jamais retarder le déplacement.
@@ -598,6 +597,56 @@
     clearPreview();
     if (placement?.valid) placePiece(drag.index, placement.row, placement.col);
     else renderTray();
+  }
+
+  function createDragGhostCanvas(piece, cellWidth, cellHeight, gapX, gapY) {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'drag-ghost';
+    const cssWidth = piece.cols * cellWidth + Math.max(0, piece.cols - 1) * gapX;
+    const cssHeight = piece.rows * cellHeight + Math.max(0, piece.rows - 1) * gapY;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+    canvas.style.willChange = 'transform';
+    canvas.width = Math.max(1, Math.round(cssWidth * dpr));
+    canvas.height = Math.max(1, Math.round(cssHeight * dpr));
+
+    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    if (!ctx) return canvas;
+    ctx.scale(dpr, dpr);
+    const color = piece.color || getPieceColor(piece.id);
+    const radius = Math.min(10, Math.max(6, cellWidth * 0.28));
+
+    for (const [r, c] of piece.cells) {
+      const x = c * (cellWidth + gapX);
+      const y = r * (cellHeight + gapY);
+      const gradient = ctx.createLinearGradient(x, y, x + cellWidth, y + cellHeight);
+      gradient.addColorStop(0, color.primary);
+      gradient.addColorStop(1, color.secondary);
+      ctx.save();
+      ctx.shadowColor = color.soft;
+      ctx.shadowBlur = Math.min(9, cellWidth * 0.32);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, cellWidth, cellHeight, radius);
+      else {
+        const rr = Math.min(radius, cellWidth / 2, cellHeight / 2);
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + cellWidth, y, x + cellWidth, y + cellHeight, rr);
+        ctx.arcTo(x + cellWidth, y + cellHeight, x, y + cellHeight, rr);
+        ctx.arcTo(x, y + cellHeight, x, y, rr);
+        ctx.arcTo(x, y, x + cellWidth, y, rr);
+      }
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = 'rgba(255,255,255,.2)';
+      ctx.lineWidth = Math.max(1, Math.min(1.5, cellWidth * 0.06));
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.16)';
+      ctx.fillRect(x + cellWidth * .08, y + cellHeight * .07, cellWidth * .84, Math.max(1, cellHeight * .055));
+      ctx.restore();
+    }
+    return canvas;
   }
 
   function updateGhost(x, y, drag = state.drag) {
