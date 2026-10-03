@@ -5,6 +5,7 @@
   const GRID = 8;
   const QUEUE_SIZE = 3;
   const SAVE_KEY = 'pulse-grid-save-v1';
+  const APP_VERSION = '5.0';
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -64,6 +65,205 @@
     ['domino-h', 'square', 'tri-h'],
     ['domino-v', 'l-small', 'line-4-h']
   ];
+
+  /* =====================================================================
+     SHAPES — formes de pièces, géométrie générique et définition des plateaux
+     ---------------------------------------------------------------------
+     Un plateau est décrit par :
+       - rows / cols : boîte englobante (la grille DOM reste rectangulaire,
+         ce qui permet de réutiliser tel quel le drag, les métriques et la preview) ;
+       - cell(r, c)  : quelles cases EXISTENT (les autres sont « void » :
+         le moteur ne les considère pas comme jouables) ;
+       - lines       : ce qui remplace la « ligne complète » (lignes, colonnes,
+         diagonales, zones personnalisées, avec poids et statut « spéciale ») ;
+       - pool        : pièces compatibles avec leur poids de tirage ;
+       - starter     : mains de départ ; mastery : conditions de progression.
+     Pour ajouter une forme : ajouter UN objet dans SHAPE_BOARDS (et, si besoin,
+     de nouvelles pièces dans EXTRA_SHAPES). Rien d'autre à modifier.
+     ===================================================================== */
+  const EXTRA_SHAPES = [
+    { id: 'line-5-h', cells: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]] },
+    { id: 'line-5-v', cells: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]] },
+    { id: 'l3-b', cells: [[0, 0], [0, 1], [1, 0]] },
+    { id: 'l3-c', cells: [[0, 0], [0, 1], [1, 1]] },
+    { id: 'l3-d', cells: [[0, 1], [1, 0], [1, 1]] },
+    { id: 'stair-6', cells: [[0, 0], [1, 0], [1, 1], [2, 0], [2, 1], [2, 2]] },
+    { id: 'stair-6-i', cells: [[0, 0], [0, 1], [0, 2], [1, 0], [1, 1], [2, 0]] },
+    { id: 't-up', cells: [[0, 1], [1, 0], [1, 1], [1, 2]] },
+    { id: 't-left', cells: [[0, 0], [1, 0], [1, 1], [2, 0]] },
+    { id: 't-right', cells: [[0, 1], [1, 0], [1, 1], [2, 1]] },
+    { id: 's', cells: [[0, 1], [0, 2], [1, 0], [1, 1]] },
+    { id: 'pyr-9', cells: [[0, 2], [1, 1], [1, 2], [1, 3], [2, 0], [2, 1], [2, 2], [2, 3], [2, 4]] },
+    { id: 'pyr-9-i', cells: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4], [1, 1], [1, 2], [1, 3], [2, 2]] },
+    { id: 'p-5', cells: [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0]] },
+    { id: 'u-5', cells: [[0, 0], [0, 1], [1, 0], [2, 0], [2, 1]] },
+    { id: 'v-5', cells: [[0, 0], [0, 1], [0, 2], [1, 0], [2, 0]] }
+  ];
+  Object.assign(PIECE_COLORS, {
+    'line-5-h': { primary: '#8ff0ff', secondary: '#3f8bff', soft: 'rgba(110,184,255,.3)' },
+    'line-5-v': { primary: '#ffd8a0', secondary: '#ff7a6e', soft: 'rgba(255,170,120,.3)' },
+    'l3-b': { primary: '#9ee6ff', secondary: '#4f7dff', soft: 'rgba(110,184,255,.28)' },
+    'l3-c': { primary: '#8cf5c0', secondary: '#2fb8a0', soft: 'rgba(110,240,190,.28)' },
+    'l3-d': { primary: '#ffc4e0', secondary: '#ff6f9b', soft: 'rgba(255,127,158,.28)' },
+    'stair-6': { primary: '#ffe08a', secondary: '#ff9b6a', soft: 'rgba(255,209,122,.3)' },
+    'stair-6-i': { primary: '#c9b5ff', secondary: '#7a63ff', soft: 'rgba(139,124,255,.3)' },
+    't-up': { primary: '#f2b0ff', secondary: '#9a6bff', soft: 'rgba(224,154,255,.28)' },
+    't-left': { primary: '#ffb7a0', secondary: '#ff6a7a', soft: 'rgba(255,155,112,.28)' },
+    't-right': { primary: '#a5f0a0', secondary: '#38cba7', soft: 'rgba(143,240,187,.28)' },
+    s: { primary: '#ffcf8a', secondary: '#ff8a5e', soft: 'rgba(255,170,100,.28)' },
+    'pyr-9': { primary: '#fff0a0', secondary: '#ffa24d', soft: 'rgba(255,209,122,.32)' },
+    'pyr-9-i': { primary: '#8fe9ff', secondary: '#5a7dff', soft: 'rgba(110,184,255,.3)' },
+    'p-5': { primary: '#ffa9d0', secondary: '#c85dff', soft: 'rgba(224,154,255,.3)' },
+    'u-5': { primary: '#b4f58f', secondary: '#38b6a0', soft: 'rgba(143,240,187,.3)' },
+    'v-5': { primary: '#ffe28a', secondary: '#ff7f6a', soft: 'rgba(255,209,122,.3)' }
+  });
+  const ALL_SHAPES = [...SHAPE_LIBRARY, ...EXTRA_SHAPES];
+  const SHAPE_BY_ID = Object.fromEntries(ALL_SHAPES.map(def => [def.id, def]));
+
+  const circleDist = (r, c, size) => Math.hypot(r - (size - 1) / 2, c - (size - 1) / 2);
+  const CLASSIC_DEF = { id: 'classic', name: 'Classic', rows: GRID, cols: GRID };
+
+  const SHAPE_BOARDS = [
+    {
+      id: 'square', name: 'Carré', icon: '■', accent: '#65e8d0', rows: 8, cols: 8,
+      tagline: 'Les fondations',
+      rule: 'Plateau 8×8 : remplis une ligne ou une colonne pour la dissoudre. Les pièces classiques, pour apprendre les bases.',
+      specialLabel: null,
+      lines: [{ kind: 'rows' }, { kind: 'cols' }],
+      starter: STARTER_WAVES,
+      pool: SHAPE_LIBRARY.map(def => [def.id, 1]),
+      mastery: { lines: 30, combo: 3, score: 1800 },
+      reward: { coins: 120, xp: 160 }
+    },
+    {
+      id: 'rectangle', name: 'Rectangle', icon: '▭', accent: '#8b9cff', rows: 6, cols: 9,
+      tagline: 'Long et étroit',
+      rule: '9 colonnes pour 6 rangées. Les lignes de 9 cases sont des lignes longues : elles rapportent ×1,5. Pièces de 5 cases en renfort.',
+      specialLabel: 'Lignes longues',
+      lines: [{ kind: 'rows', weight: 1.5, special: true }, { kind: 'cols' }],
+      starter: [['domino-h', 'tri-h', 'square'], ['l-small', 'domino-v', 'line-4-h']],
+      pool: [['dot', 1], ['domino-h', 1], ['domino-v', 1], ['tri-h', 1], ['tri-v', 1], ['square', 1], ['rect-2x3', 1], ['l-small', 1],
+        ['l3-b', .8], ['l3-c', .8], ['l3-d', .8], ['l-big', 1], ['t', 1], ['t-up', .8], ['z', 1], ['s', .8], ['plus', .7],
+        ['line-4-h', 1], ['line-4-v', .8], ['line-5-h', 1.3], ['line-5-v', .6]],
+      mastery: { lines: 40, combo: 3, score: 2200, special: 6 },
+      reward: { coins: 160, xp: 200 }
+    },
+    {
+      id: 'triangle', name: 'Triangle', icon: '◣', accent: '#ffd17a', rows: 9, cols: 9,
+      cell: (r, c) => c <= r,
+      tagline: 'Trois directions',
+      rule: 'Escalier triangulaire à 3 directions : lignes, colonnes ET diagonales. Une diagonale complète vaut ×1,5. Pièces en escalier.',
+      specialLabel: 'Diagonales',
+      lines: [{ kind: 'rows', min: 4 }, { kind: 'cols', min: 4 }, { kind: 'diag', min: 4, weight: 1.5, special: true }],
+      starter: [['domino-h', 'l3-d', 'tri-v'], ['l-small', 'square', 'domino-v']],
+      pool: [['dot', 1], ['domino-h', 1], ['domino-v', 1], ['tri-h', 1], ['tri-v', 1], ['square', 1], ['l-small', 1.2], ['l3-b', 1],
+        ['l3-c', 1], ['l3-d', 1.2], ['l-big', .8], ['t', .8], ['t-up', 1], ['t-left', 1], ['t-right', 1], ['stair-6', 1.5],
+        ['stair-6-i', 1.1], ['z', .7], ['s', .7], ['line-4-h', .6], ['line-4-v', .6]],
+      mastery: { lines: 40, combo: 3, score: 2400, special: 4 },
+      reward: { coins: 200, xp: 240 }
+    },
+    {
+      id: 'diamond', name: 'Losange', icon: '◆', accent: '#ff7f9e', rows: 10, cols: 10,
+      cell: (r, c, R, C) => Math.abs(r - (R - 1) / 2) + Math.abs(c - (C - 1) / 2) <= R / 2,
+      tagline: 'Le cœur du diamant',
+      rule: 'Losange de 60 cases. Les 4 bords diagonaux sont des lignes spéciales (×2), en plus des lignes et colonnes de 4 cases ou plus. Pièces en pyramide.',
+      specialLabel: 'Bords du losange',
+      lines: [{ kind: 'rows', min: 4 }, { kind: 'cols', min: 4 }, {
+        kind: 'custom', name: 'rim', min: 5, weight: 2, special: true,
+        key: (r, c) => {
+          const dr = r - 4.5; const dc = c - 4.5;
+          if (Math.abs(dr) + Math.abs(dc) !== 5) return null;
+          return [`${dr < 0 ? 'N' : 'S'}${dc < 0 ? 'W' : 'E'}`];
+        }
+      }],
+      starter: [['domino-h', 'plus', 'tri-h'], ['l-small', 'square', 'domino-v']],
+      pool: [['dot', 1], ['domino-h', 1], ['domino-v', 1], ['tri-h', 1], ['tri-v', 1], ['square', 1], ['l-small', 1], ['l3-b', 1],
+        ['l3-c', 1], ['l3-d', 1], ['plus', 1.6], ['t', 1], ['t-up', 1], ['t-left', 1], ['t-right', 1], ['z', .9], ['s', .9],
+        ['pyr-9', 1.2], ['pyr-9-i', 1.2], ['line-4-h', .6], ['line-4-v', .6]],
+      mastery: { lines: 45, combo: 4, score: 2800, special: 3 },
+      reward: { coins: 260, xp: 300 }
+    },
+    {
+      id: 'circle', name: 'Cercle', icon: '●', accent: '#c58bff', rows: 10, cols: 10,
+      cell: (r, c, R) => circleDist(r, c, R) <= 4.9,
+      tagline: 'Pas un coin droit',
+      rule: 'Disque de 76 cases. Lignes et colonnes de 5 cases ou plus, plus deux zones concentriques : le Noyau (×2) et l\'Anneau (×2). Pièces arrondies.',
+      specialLabel: 'Noyau & anneau',
+      lines: [{ kind: 'rows', min: 5 }, { kind: 'cols', min: 5 }, {
+        kind: 'custom', name: 'zone', min: 16, weight: 2, special: true,
+        key: (r, c) => { const d = circleDist(r, c, 10); return d < 2.2 ? 'core' : d < 3.3 ? 'ring' : null; }
+      }],
+      starter: STARTER_WAVES,
+      pool: [['dot', 1], ['domino-h', 1], ['domino-v', 1], ['tri-h', 1], ['tri-v', 1], ['square', 1.2], ['rect-2x3', .8], ['l-small', 1],
+        ['l3-b', 1], ['l3-c', 1], ['l3-d', 1], ['p-5', 1.2], ['u-5', 1], ['v-5', 1], ['plus', 1], ['t', 1], ['z', .9], ['s', .9],
+        ['l-big', .8], ['line-4-h', .6], ['line-4-v', .6]],
+      mastery: { lines: 55, combo: 4, score: 3400, special: 4 },
+      reward: { coins: 340, xp: 380 }
+    }
+  ];
+
+  // Construit la géométrie d'un plateau : cases existantes, lignes, index case → lignes, pool.
+  function buildGeometry(def) {
+    const { rows, cols } = def;
+    const mask = Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => (def.cell ? Boolean(def.cell(r, c, rows, cols)) : true)));
+    let cellCount = 0;
+    mask.forEach(row => row.forEach(value => { if (value) cellCount += 1; }));
+
+    const lines = [];
+    const addLine = (spec, kind, cells) => {
+      if (cells.length >= (spec.min || 1)) lines.push({ kind: spec.name || kind, cells, weight: spec.weight || 1, special: Boolean(spec.special) });
+    };
+    // Découpe une suite de cases en tronçons contigus selon un pas (dr, dc).
+    const splitRuns = (cells, dr, dc) => {
+      const runs = []; let current = [];
+      cells.forEach(cell => {
+        const previous = current[current.length - 1];
+        if (previous && !(cell[0] - previous[0] === dr && cell[1] - previous[1] === dc)) { runs.push(current); current = []; }
+        current.push(cell);
+      });
+      if (current.length) runs.push(current);
+      return runs;
+    };
+    const specs = def.lines || [{ kind: 'rows' }, { kind: 'cols' }];
+    specs.forEach(spec => {
+      if (spec.kind === 'rows') {
+        for (let r = 0; r < rows; r++) {
+          const cells = []; for (let c = 0; c < cols; c++) if (mask[r][c]) cells.push([r, c]);
+          splitRuns(cells, 0, 1).forEach(run => addLine(spec, 'rows', run));
+        }
+      } else if (spec.kind === 'cols') {
+        for (let c = 0; c < cols; c++) {
+          const cells = []; for (let r = 0; r < rows; r++) if (mask[r][c]) cells.push([r, c]);
+          splitRuns(cells, 1, 0).forEach(run => addLine(spec, 'cols', run));
+        }
+      } else if (spec.kind === 'diag' || spec.kind === 'anti') {
+        const groups = new Map();
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (mask[r][c]) {
+          const key = spec.kind === 'diag' ? r - c : r + c;
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push([r, c]);
+        }
+        groups.forEach(cells => splitRuns(cells, 1, spec.kind === 'diag' ? 1 : -1).forEach(run => addLine(spec, spec.kind, run)));
+      } else if (spec.kind === 'custom') {
+        const groups = new Map();
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (mask[r][c]) {
+          const result = spec.key(r, c);
+          const keys = result === null || result === undefined ? [] : Array.isArray(result) ? result : [result];
+          keys.forEach(key => { if (!groups.has(key)) groups.set(key, []); groups.get(key).push([r, c]); });
+        }
+        groups.forEach(cells => addLine(spec, 'custom', cells));
+      }
+    });
+
+    const cellLines = Array.from({ length: rows }, () => Array.from({ length: cols }, () => []));
+    lines.forEach((line, index) => line.cells.forEach(([r, c]) => cellLines[r][c].push(index)));
+    const pool = (def.pool || SHAPE_LIBRARY.map(shape => [shape.id, 1])).map(([id, weight]) => ({ def: SHAPE_BY_ID[id], w: weight }));
+    return { id: def.id, def, rows, cols, mask, cellCount, lines, cellLines, pool, starter: def.starter || STARTER_WAVES, full: cellCount === rows * cols };
+  }
+  const GEO_CACHE = {};
+  const getGeometry = def => GEO_CACHE[def.id] || (GEO_CACHE[def.id] = buildGeometry(def));
+  // Géométrie active : Classic par défaut, remplacée au lancement d'une partie SHAPES.
+  let geo = getGeometry(CLASSIC_DEF);
 
   const CATALOG = {
     skins: [
@@ -147,7 +347,7 @@
     { level: 30, type: 'skin', id: 'violet', icon: '✦', title: 'Skin Ultraviolet', milestone: true }
   ];
 
-  const DEFAULT_STATS = { games: 0, totalScore: 0, totalLines: 0, bestCombo: 0, piecesPlaced: 0, pulseBursts: 0, boostersUsed: 0 };
+  const DEFAULT_STATS = { games: 0, totalScore: 0, totalLines: 0, bestCombo: 0, piecesPlaced: 0, pulseBursts: 0, boostersUsed: 0, perfectClears: 0 };
   const defaultSave = () => ({
     best: 0,
     coins: 240,
@@ -162,12 +362,51 @@
     volume: .72,
     progressionClaims: [],
     missionDate: '',
-    missions: []
+    missions: [],
+    shapes: defaultShapes(),
+    ui: 'soft',
+    haptics: true,
+    reduceMotion: false,
+    showTip: true,
+    tutorialDone: false,
+    achievements: {},
+    daily: { last: '', streak: 0 },
+    run: null
   });
+
+  // ----- SHAPES : données de sauvegarde (séparées de Classic) -----
+  const defaultBoardProgress = () => ({ lines: 0, special: 0, bestCombo: 0, bestScore: 0, games: 0, mastered: false, seen: false });
+  const defaultShapes = () => ({ current: SHAPE_BOARDS[0].id, boards: {}, stats: { ...DEFAULT_STATS } });
+  // Accepte n'importe quelle ancienne sauvegarde : tout champ manquant reçoit sa valeur par défaut.
+  // Le déblocage est DÉRIVÉ (plateau précédent maîtrisé), donc ajouter une forme plus tard ne casse rien.
+  function normalizeShapes(raw) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const result = defaultShapes();
+    const num = value => { const n = Number(value); return Number.isFinite(n) && n > 0 ? n : 0; };
+    result.stats = { ...DEFAULT_STATS, ...(source.stats && typeof source.stats === 'object' ? source.stats : {}) };
+    SHAPE_BOARDS.forEach(board => {
+      const saved = source.boards && typeof source.boards === 'object' && source.boards[board.id] && typeof source.boards[board.id] === 'object' ? source.boards[board.id] : {};
+      const base = defaultBoardProgress();
+      result.boards[board.id] = {
+        lines: num(saved.lines), special: num(saved.special), bestCombo: num(saved.bestCombo), bestScore: num(saved.bestScore), games: num(saved.games),
+        mastered: saved.mastered === true, seen: saved.seen === true || base.seen
+      };
+    });
+    result.current = SHAPE_BOARDS.some(board => board.id === source.current) ? source.current : SHAPE_BOARDS[0].id;
+    // Cohérence : on ne reste jamais sur un plateau verrouillé.
+    const index = SHAPE_BOARDS.findIndex(board => board.id === result.current);
+    if (index > 0 && !result.boards[SHAPE_BOARDS[index - 1].id].mastered) result.current = SHAPE_BOARDS[0].id;
+    return result;
+  }
 
   let profile = loadProfile();
   let state = {
     screen: 'home',
+    mode: 'classic',
+    pendingMastery: null,
+    masteryNext: null,
+    masteryReward: null,
+    bestAtStart: 0,
     board: createEmptyBoard(),
     queue: [],
     turn: 0,
@@ -209,6 +448,18 @@
     result.equipped = { ...base.equipped, ...((parsed && parsed.equipped) || {}) };
     result.inventory = { ...base.inventory, ...((parsed && parsed.inventory) || {}) };
     result.stats = { ...DEFAULT_STATS, ...((parsed && parsed.stats) || {}) };
+    result.shapes = normalizeShapes(parsed && parsed.shapes);
+    result.ui = result.ui === 'dark' ? 'dark' : 'soft';
+    result.haptics = result.haptics !== false;
+    result.reduceMotion = result.reduceMotion === true;
+    result.showTip = result.showTip !== false;
+    result.tutorialDone = Boolean(result.tutorialDone === true || (parsed && (Number(parsed.level) > 1 || Number(parsed.best) > 0)));
+    const unlockedAch = {};
+    if (parsed && parsed.achievements && typeof parsed.achievements === 'object') Object.keys(parsed.achievements).forEach(id => { unlockedAch[id] = Number(parsed.achievements[id]) || 1; });
+    result.achievements = unlockedAch;
+    const daily = parsed && parsed.daily && typeof parsed.daily === 'object' ? parsed.daily : {};
+    result.daily = { last: typeof daily.last === 'string' ? daily.last : '', streak: Math.max(0, Math.floor(Number(daily.streak) || 0)) };
+    result.run = parsed && parsed.run && typeof parsed.run === 'object' && Array.isArray(parsed.run.board) && Array.isArray(parsed.run.queue) ? parsed.run : null;
     result.sound = result.sound !== false;
     result.music = result.music === true;
     result.volume = clamp(Number(result.volume ?? .72), 0, 1);
@@ -223,6 +474,7 @@
   }
 
   function saveProfile() {
+    if (state.gameActive && !state.packOpening) profile.run = snapshotRun();
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(profile)); } catch (_) { /* localStorage peut être désactivé en mode privé */ }
   }
 
@@ -247,7 +499,7 @@
     ];
   }
 
-  function createEmptyBoard() { return Array.from({ length: GRID }, () => Array(GRID).fill(null)); }
+  function createEmptyBoard() { return Array.from({ length: geo.rows }, () => Array(geo.cols).fill(null)); }
   function cloneShape(shape) { return shape.map(([r, c]) => [r, c]); }
   function makePiece(def) {
     const cells = cloneShape(def.cells);
@@ -256,23 +508,22 @@
 
   function occupiedCount() { return state.board.flat().filter(Boolean).length; }
 
-  function evaluateShapeOpportunity(def) {
+  // Évalue ce qu'une forme peut accomplir sur le plateau actuel (lignes complétées / presque complètes).
+  // Raisonne sur les « lignes » de la géométrie active : valable pour toutes les formes de plateau.
+  function evaluateShapeOpportunity(def, lineFilled) {
     const piece = makePiece(def);
+    const lines = geo.lines;
     let bestClear = 0; let bestNear = 0; let bestPotential = 0;
-    for (let row = 0; row < GRID; row++) for (let col = 0; col < GRID; col++) {
+    for (let row = 0; row < geo.rows; row++) for (let col = 0; col < geo.cols; col++) {
       if (!canPlace(piece, row, col)) continue;
+      const added = new Map();
+      piece.cells.forEach(([dr, dc]) => geo.cellLines[row + dr][col + dc].forEach(index => added.set(index, (added.get(index) || 0) + 1)));
       let clear = 0; let near = 0;
-      for (let r = 0; r < GRID; r++) {
-        let filled = state.board[r].filter(Boolean).length;
-        piece.cells.forEach(([dr, dc]) => { if (row + dr === r) filled += 1; });
-        if (filled >= GRID) clear += 1;
-        else if (filled === GRID - 1) near += 1;
-      }
-      for (let c = 0; c < GRID; c++) {
-        let filled = state.board.reduce((sum, currentRow) => sum + (currentRow[c] ? 1 : 0), 0);
-        piece.cells.forEach(([dr, dc]) => { if (col + dc === c) filled += 1; });
-        if (filled >= GRID) clear += 1;
-        else if (filled === GRID - 1) near += 1;
+      for (let i = 0; i < lines.length; i++) {
+        const filled = lineFilled[i] + (added.get(i) || 0);
+        const length = lines[i].cells.length;
+        if (filled >= length) clear += 1;
+        else if (filled === length - 1) near += 1;
       }
       bestClear = Math.max(bestClear, clear);
       bestNear = Math.max(bestNear, near);
@@ -282,12 +533,13 @@
   }
 
   function chooseShapeDefinition() {
-    const density = occupiedCount() / (GRID * GRID);
-    const opening = state.turn < 6 && occupiedCount() < 24;
-    const weights = SHAPE_LIBRARY.map(def => {
+    const lineFilled = geo.lines.map(line => line.cells.reduce((sum, [r, c]) => sum + (state.board[r][c] ? 1 : 0), 0));
+    const density = occupiedCount() / geo.cellCount;
+    const opening = state.turn < 6 && occupiedCount() < Math.round(geo.cellCount * .375);
+    const weights = geo.pool.map(({ def, w }) => {
       const size = def.cells.length;
-      const opportunity = evaluateShapeOpportunity(def);
-      let weight = 1;
+      const opportunity = evaluateShapeOpportunity(def, lineFilled);
+      let weight = w;
       if (density > .5 && size <= 3) weight += 2.6;
       if (density > .68 && size <= 2) weight += 2.5;
       if (!opening && density < .22 && size >= 4) weight += .8;
@@ -302,25 +554,27 @@
     });
     const total = weights.reduce((a, b) => a + b, 0);
     let roll = Math.random() * total;
-    for (let i = 0; i < SHAPE_LIBRARY.length; i++) { roll -= weights[i]; if (roll <= 0) return SHAPE_LIBRARY[i]; }
-    return SHAPE_LIBRARY[0];
+    for (let i = 0; i < geo.pool.length; i++) { roll -= weights[i]; if (roll <= 0) return geo.pool[i].def; }
+    return geo.pool[0].def;
   }
 
   function getStarterQueue() {
-    const wave = state.turn < 3 ? STARTER_WAVES[0] : state.turn < 6 ? STARTER_WAVES[1] : null;
+    const waves = geo.starter;
+    const wave = state.turn < 3 ? waves[0] : state.turn < 6 ? waves[1] : null;
     if (!wave) return null;
-    return wave.map(id => makePiece(SHAPE_LIBRARY.find(def => def.id === id)));
+    return wave.map(id => makePiece(SHAPE_BY_ID[id]));
   }
 
+  // Une case existe pour le moteur seulement si geo.mask la déclare : les cases « void » ne sont jamais jouables.
   function canPlace(piece, row, col) {
     return piece.cells.every(([dr, dc]) => {
       const r = row + dr; const c = col + dc;
-      return r >= 0 && r < GRID && c >= 0 && c < GRID && !state.board[r][c];
+      return r >= 0 && r < geo.rows && c >= 0 && c < geo.cols && geo.mask[r][c] && !state.board[r][c];
     });
   }
 
   function canAnyPlace(piece) {
-    for (let r = 0; r < GRID; r++) for (let c = 0; c < GRID; c++) if (canPlace(piece, r, c)) return true;
+    for (let r = 0; r < geo.rows; r++) for (let c = 0; c < geo.cols; c++) if (canPlace(piece, r, c)) return true;
     return false;
   }
 
@@ -329,14 +583,14 @@
       const piece = makePiece(chooseShapeDefinition());
       if (canAnyPlace(piece)) return piece;
     }
-    const fallback = SHAPE_LIBRARY.slice(0, 3).map(makePiece).find(canAnyPlace);
+    const fallback = geo.pool.slice(0, 3).map(({ def }) => makePiece(def)).find(canAnyPlace);
     return fallback || makePiece(SHAPE_LIBRARY[0]);
   }
 
   function generateQueue() {
     const starterQueue = getStarterQueue();
     const pieces = starterQueue || Array.from({ length: QUEUE_SIZE }, generatePiece);
-    if (!pieces.some(canAnyPlace) && occupiedCount() < GRID * GRID) {
+    if (!pieces.some(canAnyPlace) && occupiedCount() < geo.cellCount) {
       pieces[0] = makePiece(SHAPE_LIBRARY[0]);
     }
     return pieces;
@@ -349,8 +603,13 @@
     document.documentElement.style.setProperty('--skin-secondary', skin.secondary);
     document.documentElement.style.setProperty('--skin-soft', skin.soft);
     document.documentElement.style.setProperty('--skin-contrast', skin.contrast);
-    document.documentElement.style.setProperty('--board-shell', board.shell);
-    document.documentElement.style.setProperty('--cell-bg', board.cell);
+    const lifted = profile.ui !== 'dark' && board.id === 'night';
+    document.documentElement.dataset.ui = profile.ui === 'dark' ? 'dark' : 'soft';
+    document.documentElement.dataset.motion = profile.reduceMotion ? 'reduced' : 'full';
+    document.documentElement.dataset.tip = profile.showTip ? 'on' : 'off';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', profile.ui === 'dark' ? '#080b18' : '#2a3c63');
+    document.documentElement.style.setProperty('--board-shell', lifted ? '#2f4a7a' : board.shell);
+    document.documentElement.style.setProperty('--cell-bg', lifted ? '#4a6b9f' : board.cell);
     document.documentElement.style.setProperty('--board-glow', board.glow);
     document.body.dataset.effect = profile.equipped.effect;
     ['#board-wrap', '#piece-tray'].forEach(selector => { const el = $(selector); if (el) { el.dataset.skin = skin.id; el.dataset.board = board.id; } });
@@ -358,6 +617,9 @@
 
   function init() {
     applyTheme();
+    applyBoardLayout();
+    renderSettings();
+    // La musique démarre après la 1re interaction (autoplay bloqué par les navigateurs).
     renderBoard();
     renderHome();
     renderMissions();
@@ -365,7 +627,10 @@
     renderCollection();
     renderStats();
     renderProgression();
+    renderShapes();
+    renderTrophies();
     bindEvents();
+    initNative();
     setTimeout(() => $('#boot-screen')?.classList.add('done'), 650);
   }
 
@@ -375,7 +640,7 @@
     const moveEvent = DRAG_USE_RAW_UPDATES && typeof window !== 'undefined' && 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove';
     // Réveille l'audio dès la première interaction (et non au moment de prendre
     // une pièce) : créer l'AudioContext à ce moment-là provoque un à-coup.
-    const warmAudio = () => { if (profile.sound) getAudioContext(); };
+    const warmAudio = () => { if (profile.sound || profile.music) getAudioContext(); startMusic(); };
     document.addEventListener('pointerup', warmAudio, { once: true, passive: true });
     document.addEventListener('click', warmAudio, { once: true, passive: true });
     document.addEventListener(moveEvent, handlePointerMove, { passive: false });
@@ -390,10 +655,17 @@
     $('#modal-backdrop').addEventListener('click', event => { if (event.target.id === 'modal-backdrop' && !state.packOpening) closeModal(); });
     $('#volume-control')?.addEventListener('input', event => {
       profile.volume = clamp(Number(event.target.value) / 100, 0, 1);
-      saveProfile();
+      saveProfile(); updateMusicVolume();
       const label = $('#volume-label'); if (label) label.textContent = `${Math.round(profile.volume * 100)}%`;
     });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
+    $('#import-file')?.addEventListener('change', event => {
+      const file = event.target.files && event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => importSave(String(reader.result || ''));
+      reader.onerror = () => showToast('Lecture du fichier impossible.');
+      reader.readAsText(file); event.target.value = '';
+    });
   }
 
   function handleClick(event) {
@@ -428,9 +700,9 @@
     const cell = event.target.closest('[data-cell-index]');
     if (cell && state.screen === 'game') {
       const index = Number(cell.dataset.cellIndex);
-      if (state.activeBooster) { useBoosterAtCell(Math.floor(index / GRID), index % GRID); return; }
+      if (state.activeBooster) { useBoosterAtCell(Math.floor(index / geo.cols), index % geo.cols); return; }
       if (state.selectedPiece !== null) {
-        placeSelectedAt(Math.floor(index / GRID), index % GRID);
+        placeSelectedAt(Math.floor(index / geo.cols), index % geo.cols);
         return;
       }
     }
@@ -439,7 +711,10 @@
     if (!action) return;
     if (['pause', 'resume', 'go-home', 'close-modal', 'hint', 'progression', 'progression-current'].includes(action)) { playSfx('button'); vibrate(7); }
     switch (action) {
-      case 'play': startNewGame(); break;
+      case 'play': startNewGame('classic'); break;
+      case 'play-shapes': startNewGame('shapes', event.target.closest('[data-shape-id]')?.dataset.shapeId || null); break;
+      case 'shapes-next': startNextShapesBoard(); break;
+      case 'shapes-screen': closeModal(); state.gameActive = false; state.paused = false; showScreen('shapes'); break;
       case 'game-home': state.gameActive ? openPauseModal() : showScreen('home'); break;
       case 'pause': openPauseModal(); break;
       case 'resume': closeModal(); state.paused = false; break;
@@ -453,6 +728,23 @@
       case 'use-booster': useBooster(event.target.closest('[data-booster-id]')?.dataset.boosterId); break;
       case 'toggle-sound': toggleSound(); break;
       case 'toggle-music': toggleMusic(); break;
+      case 'toggle-theme': profile.ui = profile.ui === 'dark' ? 'soft' : 'dark'; saveProfile(); applyTheme(); renderHome(); renderSettings(); showToast(profile.ui === 'dark' ? 'Fond sombre' : 'Fond clair'); break;
+      case 'toggle-haptics': profile.haptics = profile.haptics === false; saveProfile(); renderHome(); renderSettings(); showToast(profile.haptics ? 'Vibrations activées' : 'Vibrations coupées'); if (profile.haptics) vibrate(20); break;
+      case 'resume-run': resumeRun(); break;
+      case 'install-app': installApp(); break;
+      case 'open-tutorial': openTutorial(0); break;
+      case 'tutorial-next': openTutorial(Number(event.target.closest('[data-page]')?.dataset.page || 0) + 1); break;
+      case 'tutorial-skip': finishTutorial(); break;
+      case 'share-score': shareScore(); break;
+      case 'toggle-motion': profile.reduceMotion = !profile.reduceMotion; saveProfile(); applyTheme(); renderSettings(); break;
+      case 'toggle-tip': profile.showTip = !profile.showTip; saveProfile(); applyTheme(); renderSettings(); break;
+      case 'test-sound': playSfx('unlock'); if (profile.music) startMusic(); if (!profile.sound) showToast('Les effets sonores sont coupés.'); break;
+      case 'export-save': exportSave(); break;
+      case 'copy-save': copySave(); break;
+      case 'import-save': $('#import-file')?.click(); break;
+      case 'reset-classic': case 'reset-shapes': case 'reset-all': askReset(action.slice(6)); break;
+      case 'confirm-reset': doReset(event.target.closest('[data-scope]')?.dataset.scope); break;
+      case 'claim-daily': claimDaily(); break;
       case 'claim-mission': claimMission(event.target.closest('[data-mission-id]')?.dataset.missionId); break;
       case 'buy-item': buyItem(event.target.closest('[data-item]')?.dataset.category, event.target.closest('[data-item]')?.dataset.item); break;
       case 'buy-booster': buyBooster(event.target.closest('[data-booster-id]')?.dataset.boosterId); break;
@@ -651,7 +943,7 @@
     clearPreview();
     setDragMode(false);
     if (placement?.valid) placePiece(drag.index, placement.row, placement.col);
-    else renderTray();
+    else { if (placement) playSfx('error'); renderTray(); }
   }
 
   // Le dessin du fantôme (dégradés + ombres) est coûteux sur un téléphone
@@ -822,7 +1114,7 @@
     if (!placement.valid) {
       showPreview(piece, placement);
       showToast('Cet emplacement ne peut pas accueillir ce fragment.');
-      vibrate(16);
+      vibrate(16); playSfx('error');
       return;
     }
     placePiece(index, placement.row, placement.col);
@@ -838,8 +1130,8 @@
     state.preview = piece.cells.map(([dr, dc]) => ({ row: row + dr, col: col + dc, valid }));
     const boardCells = $('#board')?.children;
     state.preview.forEach(({ row: r, col: c, valid: ok }) => {
-      if (boardCells && r >= 0 && r < GRID && c >= 0 && c < GRID) {
-        const cell = boardCells[r * GRID + c];
+      if (boardCells && r >= 0 && r < geo.rows && c >= 0 && c < geo.cols) {
+        const cell = boardCells[r * geo.cols + c];
         cell.classList.add(ok ? 'preview-valid' : 'preview-invalid');
         state.previewNodes.push(cell);
       }
@@ -856,7 +1148,7 @@
   function createPieceVisual(piece, ghost = false) {
     const shape = document.createElement('div');
     const color = getPieceColor(piece.id);
-    shape.className = 'piece-shape' + (ghost ? ' ghost-shape' : '');
+    shape.className = 'piece-shape' + (ghost ? ' ghost-shape' : '') + (Math.max(piece.cols, piece.rows) >= 5 ? ' wide' : '');
     shape.style.setProperty('--piece-cols', piece.cols);
     shape.style.setProperty('--piece-rows', piece.rows);
     shape.style.setProperty('--piece-primary', color.primary);
@@ -874,22 +1166,33 @@
     const board = $('#board');
     if (!board) return;
     state.boardMetricsCache = null;
-    if (board.children.length !== GRID * GRID) {
+    const rows = geo.rows; const cols = geo.cols;
+    const dims = `${rows}x${cols}`;
+    if (board.dataset.dims !== dims || board.children.length !== rows * cols) {
       board.innerHTML = '';
-      for (let i = 0; i < GRID * GRID; i++) {
+      board.dataset.dims = dims;
+      for (let i = 0; i < rows * cols; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell'; cell.dataset.cellIndex = i; cell.setAttribute('role', 'gridcell');
         board.appendChild(cell);
       }
     }
-    const rowDensity = state.board.map(row => row.filter(Boolean).length);
-    const colDensity = Array.from({ length: GRID }, (_, c) => state.board.filter(row => row[c]).length);
+    // « Presque complète » : une ligne régulière à 2 cases de la fin (1 case pour les lignes courtes
+    // ou spéciales). Pour Classic (lignes de 8) le seuil reste exactement 6 cases remplies.
+    const near = new Uint8Array(rows * cols);
+    geo.lines.forEach(line => {
+      const length = line.cells.length;
+      let filled = 0;
+      line.cells.forEach(([r, c]) => { if (state.board[r][c]) filled += 1; });
+      const regular = (line.kind === 'rows' || line.kind === 'cols') && !line.special;
+      const threshold = regular && length >= 6 ? length - 2 : length - 1;
+      if (filled >= threshold) line.cells.forEach(([r, c]) => { near[r * cols + c] = 1; });
+    });
     [...board.children].forEach((cell, index) => {
-      const r = Math.floor(index / GRID); const c = index % GRID;
+      const r = Math.floor(index / cols); const c = index % cols;
       const boardPiece = state.board[r][c];
       const occupied = Boolean(boardPiece);
-      const almostFull = rowDensity[r] >= 6 || colDensity[c] >= 6;
-      cell.className = `cell${occupied ? ' filled' : ''}${almostFull ? ' near-line' : ''}`;
+      cell.className = `cell${geo.mask[r][c] ? '' : ' void'}${occupied ? ' filled' : ''}${near[index] ? ' near-line' : ''}`;
       cell.removeAttribute('style');
       if (occupied) {
         const color = getPieceColor(boardPiece.piece);
@@ -916,10 +1219,11 @@
 
   function renderHud() {
     $('#game-score').textContent = formatNumber(state.score);
-    $('#game-best').textContent = formatNumber(Math.max(profile.best, state.score));
+    $('#game-best').textContent = formatNumber(Math.max(getBest(), state.score));
     const badge = $('#combo-badge');
     if (state.combo > 1) { badge.classList.remove('hidden'); badge.querySelector('b').textContent = state.combo; } else badge.classList.add('hidden');
     renderCharge();
+    renderShapeHud();
   }
 
   function renderCharge() {
@@ -968,7 +1272,7 @@
 
   function animatePlacedCells(cells) {
     cells.forEach(([row, col], index) => {
-      const cell = $('#board').children[row * GRID + col];
+      const cell = $('#board').children[row * geo.cols + col];
       if (!cell) return;
       cell.style.setProperty('--landing-delay', `${Math.min(index * 8, 40)}ms`);
       retriggerClass(cell, 'landing');
@@ -987,7 +1291,7 @@
       return false;
     }
     profile.inventory[id] -= 1;
-    profile.stats.boostersUsed += 1;
+    modeStats().boostersUsed += 1;
     saveProfile();
     renderBoosters();
     if (state.screen === 'shop') renderShop();
@@ -1116,17 +1420,33 @@
     }
   }
 
-  function startNewGame() {
+  function startNewGame(mode = state.mode, boardId = null) {
     cancelDrag();
     closeModal();
+    state.mode = mode === 'shapes' ? 'shapes' : 'classic';
+    profile.run = null;
+    let shapeId = null;
+    if (state.mode === 'shapes') {
+      shapeId = boardId && isShapeUnlocked(boardId) ? boardId : suggestedShapesBoard();
+      if (!isShapeUnlocked(shapeId)) shapeId = SHAPE_BOARDS[0].id;
+      profile.shapes.current = shapeId;
+    }
+    // La géométrie est fixée AVANT la création du plateau et de la première main.
+    activateBoard(state.mode, shapeId);
     clearTimeout(state.highScoreTimer);
     clearTimeout(state.clearFeedbackTimer);
     $('#high-score-feedback')?.classList.remove('show');
     $('#high-score-feedback')?.setAttribute('aria-hidden', 'true');
     $('#clear-feedback')?.classList.remove('show');
     $('#clear-feedback')?.setAttribute('aria-hidden', 'true');
-    state.screen = 'game'; state.board = createEmptyBoard(); state.turn = 0; state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.recordAnnounced = false; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.clearVisualPending = false; state.clearVisualToken += 1; state.gameActive = true; state.paused = false;
+    state.screen = 'game'; state.board = createEmptyBoard(); state.turn = 0; state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.recordAnnounced = false; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.clearVisualPending = false; state.clearVisualToken += 1; state.gameActive = true; state.paused = false; state.bestAtStart = getBest(); state.pendingMastery = null; state.masteryNext = null; state.masteryReward = null;
     showScreen('game'); renderBoard(); renderTray(); renderHud(); renderBoosters(); animateTrayArrival(); animateBoosterArrival(); $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.'; vibrate(8); playSfx('start');
+    if (state.mode === 'classic' && !profile.tutorialDone) openTutorial(0);
+    if (state.mode === 'shapes') {
+      const prog = shapesProgress();
+      if (!prog.seen) { prog.seen = true; openBoardIntro(shapeDef(geo.id)); }
+      saveProfile();
+    }
   }
 
   function showScreen(route) {
@@ -1141,20 +1461,29 @@
     if (route === 'collection') renderCollection();
     if (route === 'missions') renderMissions();
     if (route === 'stats') renderStats();
+    if (route === 'shapes') renderShapes();
+    if (route === 'settings') renderSettings();
+    if (route === 'trophies') renderTrophies();
+    keepAwake(route === 'game' && state.gameActive);
     if (route === 'progression') {
       renderProgression();
       requestAnimationFrame(() => scrollProgressionToCurrent(false));
     }
   }
 
+  // Une « ligne » est définie par la géométrie active (lignes, colonnes, diagonales, zones…).
+  // Pour Classic : exactement les 8 lignes + 8 colonnes d'avant.
   function clearCompletedLines() {
-    const fullRows = []; const fullCols = [];
-    for (let r = 0; r < GRID; r++) if (state.board[r].every(Boolean)) fullRows.push(r);
-    for (let c = 0; c < GRID; c++) if (state.board.every(row => row[c])) fullCols.push(c);
-    const cells = new Set();
-    fullRows.forEach(r => { for (let c = 0; c < GRID; c++) cells.add(`${r},${c}`); });
-    fullCols.forEach(c => { for (let r = 0; r < GRID; r++) cells.add(`${r},${c}`); });
-    return { rows: fullRows, cols: fullCols, cells: [...cells].map(value => value.split(',').map(Number)) };
+    const done = []; const seen = new Set(); const cells = []; let weightSum = 0;
+    geo.lines.forEach(line => {
+      if (!line.cells.every(([r, c]) => state.board[r][c])) return;
+      done.push(line); weightSum += line.weight;
+      line.cells.forEach(([r, c]) => { const key = r * geo.cols + c; if (!seen.has(key)) { seen.add(key); cells.push([r, c]); } });
+    });
+    return {
+      lines: done, count: done.length, weightSum, cells,
+      rows: done.filter(line => line.kind === 'rows'), cols: done.filter(line => line.kind === 'cols')
+    };
   }
 
   function calculatePlacementScore(piece) {
@@ -1166,8 +1495,9 @@
   // effectivement effacée, puis un bonus de combo. Les intersections ligne /
   // colonne ne sont comptées qu'une seule fois dans completed.cells.
   function calculateClearScore(completed, combo, pulseBonus = 0) {
-    const lineCount = completed.rows.length + completed.cols.length;
-    const lineScore = lineCount * 100 + Math.max(0, lineCount - 1) ** 2 * 45;
+    const lineCount = completed.count;
+    const weightBonus = Math.round((completed.weightSum - completed.count) * 100);
+    const lineScore = lineCount * 100 + Math.max(0, lineCount - 1) ** 2 * 45 + weightBonus;
     const clearedCellScore = completed.cells.length * 15;
     const comboScore = Math.max(0, combo - 1) * 80 + Math.max(0, combo - 2) * 35;
     const comboMultiplier = 1 + Math.min(.4, Math.max(0, combo - 1) * .08);
@@ -1182,7 +1512,7 @@
     const placedCells = piece.cells.map(([dr, dc]) => [row + dr, col + dc]);
     const placementScore = calculatePlacementScore(piece);
     piece.cells.forEach(([dr, dc]) => { state.board[row + dr][col + dc] = { piece: piece.id, color: getPieceColor(piece.id) }; });
-    profile.stats.piecesPlaced += 1; updateMission('pieces', 1);
+    modeStats().piecesPlaced += 1; updateMission('pieces', 1);
     state.score += placementScore;
     state.queue[index] = null; renderBoard(); renderTray(); renderHud(); animatePlacedCells(placedCells);
     spawnScorePopup(`+${formatNumber(placementScore)}`, 'place', placedCells);
@@ -1190,22 +1520,27 @@
     playSfx('place'); vibrate(10);
     const completed = clearCompletedLines();
     if (completed.cells.length) {
-      const clearedLines = completed.rows.length + completed.cols.length;
+      const clearedLines = completed.count;
       const pulseReady = state.charge >= 100;
       state.lines += clearedLines; state.combo += 1; state.bestComboInGame = Math.max(state.bestComboInGame, state.combo);
       const chargeGain = clearedLines * 16 + completed.cells.length * 0.7 + state.combo * 3;
       let pulseBonus = 0;
       if (pulseReady) {
-        state.charge = 0; state.pulseBursts += 1; profile.stats.pulseBursts += 1; pulseBonus = 250 + clearedLines * 75;
+        state.charge = 0; state.pulseBursts += 1; modeStats().pulseBursts += 1; pulseBonus = 250 + clearedLines * 75;
         updateMission('pulse', 1);
       } else state.charge = Math.min(100, state.charge + chargeGain);
       const clearScore = calculateClearScore(completed, state.combo, pulseBonus);
       state.score += clearScore;
-      profile.stats.totalLines += clearedLines;
-      if (state.combo > profile.stats.bestCombo) profile.stats.bestCombo = state.combo;
+      modeStats().totalLines += clearedLines;
+      if (state.combo > modeStats().bestCombo) modeStats().bestCombo = state.combo;
       updateMission('lines', clearedLines); updateMission('combo', state.combo); updateMission('score', state.score);
+      trackShapesProgress(completed);
       markCellsClearing(completed.cells);
       completed.cells.forEach(([r, c]) => { state.board[r][c] = null; });
+      if (occupiedCount() === 0) {
+        state.score += 500; modeStats().perfectClears = (modeStats().perfectClears || 0) + 1;
+        setTimeout(() => { spawnScorePopup('PLATEAU VIDE +500', 'pulse', [], true); showToast('PLATEAU VIDE ! +500 pts bonus'); playSfx('record'); vibrate([30, 16, 60]); }, 280);
+      }
       const clearVisualToken = ++state.clearVisualToken;
       state.clearVisualPending = true;
       // Le modèle est déjà nettoyé : on libère immédiatement la prochaine
@@ -1233,9 +1568,9 @@
       else setTimeout(runClearFeedback, 0);
       setTimeout(() => finishClear(clearVisualToken), pulseReady ? 320 : 230);
     } else {
-      state.combo = 0; updateMission('score', state.score); finishTurn();
+      state.combo = 0; updateMission('score', state.score); trackShapesProgress(null); finishTurn();
     }
-    if (profile.best > 0 && !state.recordAnnounced && scoreBeforeMove <= profile.best && state.score > profile.best) {
+    if (state.bestAtStart > 0 && !state.recordAnnounced && scoreBeforeMove <= state.bestAtStart && state.score > state.bestAtStart) {
       state.recordAnnounced = true;
       showHighScoreFeedback(state.score);
       showToast('NEW HIGH SCORE ! Continue comme ça.');
@@ -1243,12 +1578,12 @@
       playSfx('record');
       vibrate([28, 14, 52]);
     }
-    renderHud(); saveProfile();
+    renderHud(); checkAchievements(); saveProfile();
   }
 
   function markCellsClearing(cells) {
     cells.forEach(([r, c], index) => {
-      const cell = $('#board').children[r * GRID + c];
+      const cell = $('#board').children[r * geo.cols + c];
       if (!cell) return;
       cell.style.setProperty('--clear-delay', `${Math.min(index * 5, 40)}ms`);
       cell.classList.add('clearing');
@@ -1280,22 +1615,32 @@
     else { $('#game-message').textContent = state.combo > 1 ? `Le rythme est lancé : combo ×${state.combo}.` : 'À toi de jouer. Trouve le prochain espace.'; saveProfile(); }
   }
 
-  function endGame() {
+  function endGame(options = {}) {
     if (!state.gameActive) return;
-    state.gameActive = false; state.resolving = false; state.activeBooster = null;
+    state.gameActive = false; state.resolving = false; state.activeBooster = null; profile.run = null; keepAwake(false);
     renderBoosters();
     const reward = 20 + Math.floor(state.score / 250) + state.lines * 3 + Math.max(0, state.bestComboInGame - 1) * 5 + state.pulseBursts * 12;
     const xpEarned = 45 + Math.floor(state.score / 28) + state.lines * 12;
     const levelBefore = profile.level;
-    const previousBest = profile.best;
+    const previousBest = state.bestAtStart;
     const isNewRecord = state.score > previousBest;
-    profile.coins += reward; profile.stats.games += 1; profile.stats.totalScore += state.score; profile.best = Math.max(profile.best, state.score);
+    const modeStat = modeStats();
+    profile.coins += reward; modeStat.games += 1; modeStat.totalScore += state.score;
+    if (state.mode === 'shapes') {
+      const boardProgress = shapesProgress();
+      boardProgress.games += 1; boardProgress.bestScore = Math.max(boardProgress.bestScore, state.score);
+    } else profile.best = Math.max(profile.best, state.score);
     updateMission('games', 1); updateMission('score', state.score);
     const levels = addXp(xpEarned);
-    saveProfile(); renderHome(); renderMissions(); renderStats(); renderHud();
-    playSfx(isNewRecord && !state.recordAnnounced ? 'record' : 'gameOver');
-    vibrate(isNewRecord && !state.recordAnnounced ? [28, 14, 52] : [18, 12, 28]);
-    openEndModal(reward, xpEarned, levels, levelBefore, isNewRecord, previousBest);
+    checkAchievements();
+    saveProfile(); renderHome(); renderMissions(); renderStats(); renderHud(); renderShapes(); renderTrophies();
+    if (options.silent) { showToast(`Partie enregistrée · +${reward} ◆ · +${xpEarned} XP`); return; }
+    const masteryNow = state.mode === 'shapes' && state.pendingMastery;
+    if (!masteryNow) {
+      playSfx(isNewRecord && !state.recordAnnounced ? 'record' : 'gameOver');
+      vibrate(isNewRecord && !state.recordAnnounced ? [28, 14, 52] : [18, 12, 28]);
+      openEndModal(reward, xpEarned, levels, levelBefore, isNewRecord, previousBest);
+    } else showMasteryCelebration();
     showRewardPopup(`+${reward} ◆`, 'coins');
     setTimeout(() => { showRewardPopup(`+${xpEarned} XP`, 'xp'); playSfx('xp'); }, 90);
     setTimeout(() => playSfx('coins'), 210);
@@ -1450,6 +1795,7 @@
     $('#home-progression-next').textContent = progressionLabel;
     const available = profile.missions.filter(m => m.progress >= m.target && !m.claimed).length; $('#home-mission-count').textContent = available ? `${available} à réclamer` : 'Défis du jour';
     const mission = profile.missions.find(m => !m.claimed) || profile.missions[0];
+    renderShapesHome(); renderHomeExtras(); renderTrophyCount();
     if (mission) { $('#home-mission-title').textContent = mission.title; $('#home-mission-fill').style.width = `${clamp(mission.progress / mission.target * 100, 0, 100)}%`; }
   }
 
@@ -1505,7 +1851,7 @@
   }
   function skinColorForShape(skin, shapeId) {
     if (!skin || !skin.palette) return PIECE_COLORS[shapeId] || PIECE_COLORS.dot;
-    return paletteColor(skin, Math.max(0, SHAPE_LIBRARY.findIndex(shape => shape.id === shapeId)));
+    return paletteColor(skin, Math.max(0, ALL_SHAPES.findIndex(shape => shape.id === shapeId)));
   }
 
   const DEMO5 = [[-1, -1, -1, -1, -1], [0, 0, -1, 3, -1], [0, -1, -1, 3, 3], [1, 1, 1, -1, 2], [4, 4, -1, 4, 2]];
@@ -2065,7 +2411,7 @@
 
   function renderStats() {
     const next = xpForNextLevel(profile.level); const ratio = clamp(profile.xp / next * 100, 0, 100); const stats = profile.stats;
-    $('#stats-content').innerHTML = `<article class="stats-level-card"><div class="stats-level-top"><div><span class="eyebrow accent">NIVEAU ACTUEL</span><h2>Architecte de pulse</h2></div><strong>${profile.level}</strong></div><p>${formatNumber(profile.xp)} / ${formatNumber(next)} XP avant le niveau ${profile.level + 1}</p><div class="xp-track"><span style="width:${ratio}%"></span></div></article><div class="stats-grid"><article class="stat-box"><span>Meilleur score</span><strong>${formatNumber(profile.best)}</strong><em>record personnel</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(stats.games)}</strong><em>tentatives</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(stats.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(stats.bestCombo)}</strong><em>chaîne maximale</em></article><article class="stat-box"><span>Score cumulé</span><strong>${formatNumber(stats.totalScore)}</strong><em>toutes parties</em></article><article class="stat-box"><span>Fragments posés</span><strong>${formatNumber(stats.piecesPlaced)}</strong><em>patience & précision</em></article><article class="stat-box"><span>Pulse Bursts</span><strong>${formatNumber(stats.pulseBursts)}</strong><em>surcharges parfaites</em></article><article class="stat-box"><span>Bonus utilisés</span><strong>${formatNumber(stats.boostersUsed)}</strong><em>coups de secours</em></article></div><div class="tip-card">Les scores, objets et missions sont enregistrés automatiquement sur cet appareil grâce à <strong>localStorage</strong>. Ferme le jeu sans crainte : ta progression reste là.</div>`;
+    $('#stats-content').innerHTML = `<article class="stats-level-card"><div class="stats-level-top"><div><span class="eyebrow accent">NIVEAU ACTUEL</span><h2>Architecte de pulse</h2></div><strong>${profile.level}</strong></div><p>${formatNumber(profile.xp)} / ${formatNumber(next)} XP avant le niveau ${profile.level + 1}</p><div class="xp-track"><span style="width:${ratio}%"></span></div></article><div class="section-heading"><h2>Classic</h2><span class="section-line"></span></div><div class="stats-grid"><article class="stat-box"><span>Meilleur score</span><strong>${formatNumber(profile.best)}</strong><em>record personnel</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(stats.games)}</strong><em>tentatives</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(stats.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(stats.bestCombo)}</strong><em>chaîne maximale</em></article><article class="stat-box"><span>Score cumulé</span><strong>${formatNumber(stats.totalScore)}</strong><em>toutes parties</em></article><article class="stat-box"><span>Fragments posés</span><strong>${formatNumber(stats.piecesPlaced)}</strong><em>patience & précision</em></article><article class="stat-box"><span>Pulse Bursts</span><strong>${formatNumber(stats.pulseBursts)}</strong><em>surcharges parfaites</em></article><article class="stat-box"><span>Bonus utilisés</span><strong>${formatNumber(stats.boostersUsed)}</strong><em>coups de secours</em></article></div>${shapesStatsHTML()}<div class="tip-card">Les scores, objets et missions sont enregistrés automatiquement sur cet appareil grâce à <strong>localStorage</strong>. Ferme le jeu sans crainte : ta progression reste là.</div>`;
   }
 
   function giveHint(options = {}) {
@@ -2073,9 +2419,10 @@
     const piece = state.queue.find(item => item && canAnyPlace(item));
     if (!piece) { showToast('Aucun fragment ne peut être posé.'); return false; }
     let best = null; let bestValue = -Infinity;
-    for (let r = 0; r < GRID; r++) for (let c = 0; c < GRID; c++) if (canPlace(piece, r, c)) {
-      let value = 0; piece.cells.forEach(([dr, dc]) => { const rr = r + dr; const cc = c + dc; if (rr === 0 || rr === GRID - 1) value += .5; if (cc === 0 || cc === GRID - 1) value += .5; });
-      const nearFull = [...Array(GRID)].map((_, i) => state.board[r + i]?.filter(Boolean).length || 0).reduce((a, b) => a + b, 0); value += nearFull * .01;
+    for (let r = 0; r < geo.rows; r++) for (let c = 0; c < geo.cols; c++) if (canPlace(piece, r, c)) {
+      // Bonus pour les cases collées au bord du plateau (bord de la forme, pas de la boîte englobante).
+      let value = 0; piece.cells.forEach(([dr, dc]) => { const rr = r + dr; const cc = c + dc; if (!geo.mask[rr - 1]?.[cc]) value += .5; if (!geo.mask[rr + 1]?.[cc]) value += .5; if (!geo.mask[rr]?.[cc - 1]) value += .5; if (!geo.mask[rr]?.[cc + 1]) value += .5; });
+      const nearFull = [...Array(geo.rows)].map((_, i) => state.board[r + i]?.filter(Boolean).length || 0).reduce((a, b) => a + b, 0); value += nearFull * .01;
       if (value > bestValue) { bestValue = value; best = { r, c }; }
     }
     const index = state.queue.indexOf(piece);
@@ -2098,7 +2445,7 @@
     const recordTitle = isNewRecord ? 'Tu viens de monter la barre.' : 'Bien joué.';
     const recordBanner = isNewRecord ? `<div class="end-record-banner"><span>NEW HIGH SCORE</span><strong>${formatNumber(state.score)}</strong></div>` : '';
     const recordMessage = isNewRecord ? 'Cette partie devient ton nouveau repère. Encore une pour voir jusqu\'où tu peux pousser la grille.' : previousBest > 0 ? `Il te manquait ${formatNumber(Math.max(0, previousBest - state.score))} points pour battre ton record.` : 'Chaque partie construit ton premier record. Le prochain coup peut déjà tout changer.';
-    openModal(`${recordBanner}<span class="modal-kicker ${isNewRecord ? 'record-kicker' : ''}">${recordKicker}</span><h2>${recordTitle}</h2><p>${recordMessage}</p><div class="result-score ${isNewRecord ? 'record-score' : ''}"><span>SCORE</span><strong>${formatNumber(state.score)}</strong></div><div class="result-stats"><div class="result-stat"><strong>${formatNumber(state.lines)}</strong><span>lignes supprimées</span></div><div class="result-stat"><strong>×${formatNumber(Math.max(profile.stats.bestCombo, state.bestComboInGame))}</strong><span>meilleur combo</span></div><div class="result-stat"><strong>${formatNumber(state.turn)}</strong><span>pièces posées</span></div><div class="result-stat"><strong>${formatNumber(profile.best)}</strong><span>meilleur score</span></div></div><div class="reward-row"><div>◆ ${reward}<span>PulseCoins</span></div><div>✦ ${xpEarned}<span>XP gagnés</span></div></div>${levelText}<div class="modal-actions"><button class="secondary" data-action="go-home">ACCUEIL</button><button class="primary" data-action="restart">REJOUER</button></div>`);
+    openModal(`${recordBanner}<span class="modal-kicker ${isNewRecord ? 'record-kicker' : ''}">${recordKicker}</span><h2>${recordTitle}</h2><p>${recordMessage}</p><div class="result-score ${isNewRecord ? 'record-score' : ''}"><span>SCORE</span><strong>${formatNumber(state.score)}</strong></div><div class="result-stats"><div class="result-stat"><strong>${formatNumber(state.lines)}</strong><span>lignes supprimées</span></div><div class="result-stat"><strong>×${formatNumber(Math.max(modeStats().bestCombo, state.bestComboInGame))}</strong><span>meilleur combo</span></div><div class="result-stat"><strong>${formatNumber(state.turn)}</strong><span>pièces posées</span></div><div class="result-stat"><strong>${formatNumber(getBest())}</strong><span>meilleur score</span></div></div><div class="reward-row"><div>◆ ${reward}<span>PulseCoins</span></div><div>✦ ${xpEarned}<span>XP gagnés</span></div></div>${levelText}${shapesEndBlock()}<button class="share-link" data-action="share-score">↗ PARTAGER MON SCORE</button><div class="modal-actions"><button class="secondary" data-action="go-home">ACCUEIL</button>${state.mode === 'shapes' ? '<button class="secondary" data-action="shapes-screen">PLATEAUX</button>' : ''}<button class="primary" data-action="restart">REJOUER</button></div>`);
   }
 
   function openModal(content, variant = '') {
@@ -2130,7 +2477,7 @@
       const particle = document.createElement('i');
       const type = pulseBurst ? 'pulse-particle' : effect === 'ring' ? 'ring' : effect === 'confetti' ? 'round' : effect === 'nova' ? 'nova-particle' : effect === 'magnet' ? 'magnet-particle' : '';
       particle.className = `fx-particle ${type}`;
-      const x = ((c + .5) / GRID) * 100; const y = ((r + .5) / GRID) * 100;
+      const x = ((c + .5) / geo.cols) * 100; const y = ((r + .5) / geo.rows) * 100;
       particle.style.left = `${x}%`; particle.style.top = `${y}%`; particle.style.setProperty('--dx', `${(Math.random() - .5) * (pulseBurst ? 150 : 95)}px`); particle.style.setProperty('--dy', `${-15 - Math.random() * (pulseBurst ? 110 : 75)}px`); particle.style.animationDelay = `${index * (pulseBurst ? 7 : 12)}ms`; layer.appendChild(particle); setTimeout(() => particle.remove(), pulseBurst ? 1100 : 850);
     });
     if (pulseBurst || effect === 'spark' || effect === 'nova' || effect === 'magnet') layer.animate([{ opacity: .35 }, { opacity: 1 }, { opacity: .35 }], { duration: pulseBurst ? 440 : effect === 'nova' ? 260 : 360, iterations: 2 });
@@ -2221,14 +2568,14 @@
   function spawnScorePopup(text, type = 'place', cells = [], raised = false) {
     const layer = $('#fx-layer');
     if (!layer) return;
-    const points = cells.length ? cells : [[3, 3]];
+    const points = cells.length ? cells : [[Math.floor(geo.rows / 2), Math.floor(geo.cols / 2)]];
     const averageRow = points.reduce((sum, cell) => sum + cell[0], 0) / points.length;
     const averageCol = points.reduce((sum, cell) => sum + cell[1], 0) / points.length;
     const popup = document.createElement('span');
     popup.className = `score-pop ${type}${raised ? ' raised' : ''}`;
     popup.textContent = text;
-    popup.style.left = `${clamp(((averageCol + .5) / GRID) * 100, 8, 92)}%`;
-    popup.style.top = `${clamp(((averageRow + .5) / GRID) * 100, 12, 88)}%`;
+    popup.style.left = `${clamp(((averageCol + .5) / geo.cols) * 100, 8, 92)}%`;
+    popup.style.top = `${clamp(((averageRow + .5) / geo.rows) * 100, 12, 88)}%`;
     layer.appendChild(popup);
     setTimeout(() => popup.remove(), type === 'pulse' ? 1150 : 900);
   }
@@ -2291,22 +2638,61 @@
   function toggleMusic() {
     profile.music = !profile.music;
     saveProfile(); renderHome();
-    showToast(profile.music ? 'Musique activée · aucune piste configurée' : 'Musique coupée');
+    showToast(profile.music ? 'Musique d\u2019ambiance activée' : 'Musique coupée');
+    if (profile.music) startMusic(); else stopMusic();
     if (profile.sound) playSfx('button');
   }
 
   function vibrate(pattern) {
+    if (profile.haptics === false) return;
     try {
       if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(pattern);
     } catch (_) { /* vibration facultative */ }
   }
 
+  /* =====================================================================
+     AUDIO — moteur Web Audio
+     Chaîne : voix → bus (sfx / musique) → master → compresseur → sortie,
+     avec un envoi de réverbération (réponse impulsionnelle générée, aucun fichier).
+     Les sons sont planifiés avec l'horloge audio (précis, sans setTimeout).
+     ===================================================================== */
   let audioContext = null;
+  let audioNodes = null;
+  let activeVoices = 0;
+  const MAX_VOICES = 36;
+  const midiToHz = midi => 440 * Math.pow(2, (midi - 69) / 12);
+  const PENTA = [0, 2, 4, 7, 9];
+  const pentaMidi = (root, step) => root + PENTA[((step % 5) + 5) % 5] + 12 * Math.floor(step / 5);
+
+  function buildAudioGraph(context) {
+    const master = context.createGain(); master.gain.value = .9;
+    const limiter = context.createDynamicsCompressor();
+    limiter.threshold.value = -16; limiter.knee.value = 22; limiter.ratio.value = 5; limiter.attack.value = .004; limiter.release.value = .24;
+    master.connect(limiter); limiter.connect(context.destination);
+    const sfx = context.createGain(); sfx.connect(master);
+    const music = context.createGain(); music.gain.value = 0; music.connect(master);
+    // Réverbération : bruit stéréo à décroissance exponentielle (~1,3 s).
+    const length = Math.floor(context.sampleRate * 1.3);
+    const impulse = context.createBuffer(2, length, context.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.6);
+    }
+    const convolver = context.createConvolver(); convolver.buffer = impulse;
+    const wet = context.createGain(); wet.gain.value = .34;
+    const send = context.createGain();
+    send.connect(convolver); convolver.connect(wet); wet.connect(master);
+    const noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
+    const noiseData = noise.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) noiseData[i] = Math.random() * 2 - 1;
+    return { master, sfx, music, send, noise };
+  }
+
   function getAudioContext() {
     try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return null;
-      if (!audioContext) audioContext = new AudioContext();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!audioContext) { audioContext = new AudioContextClass(); audioNodes = buildAudioGraph(audioContext); }
       if (audioContext.state === 'suspended') {
         const resume = audioContext.resume();
         if (resume?.catch) resume.catch(() => {});
@@ -2315,46 +2701,727 @@
     } catch (_) { return null; }
   }
 
-  function playTone(frequency, duration, options = {}) {
-    if (!profile.sound || profile.volume <= 0) return;
-    const context = getAudioContext();
-    if (!context) return;
+  // Une voix : oscillateur(s) → filtre → enveloppe → pan → bus (+ réverbération).
+  function voice(freq, start, duration, o = {}) {
+    const context = audioContext; if (!context || !audioNodes || activeVoices >= MAX_VOICES) return;
     try {
-      const oscillator = context.createOscillator();
+      const peak = Math.max(.0008, (o.gain ?? .05) * (o.music ? 1 : profile.volume));
+      const attack = o.attack ?? .006;
       const gain = context.createGain();
-      const now = context.currentTime;
-      const peak = Math.max(.001, (options.gain ?? .04) * profile.volume);
-      oscillator.type = options.type || 'sine';
-      oscillator.frequency.setValueAtTime(frequency, now);
-      if (options.to) oscillator.frequency.exponentialRampToValueAtTime(options.to, now + duration);
-      gain.gain.setValueAtTime(.001, now);
-      gain.gain.exponentialRampToValueAtTime(peak, now + Math.min(.012, duration * .2));
-      gain.gain.exponentialRampToValueAtTime(.001, now + duration);
-      oscillator.connect(gain); gain.connect(context.destination);
-      oscillator.start(now); oscillator.stop(now + duration + .015);
+      gain.gain.setValueAtTime(.0001, start);
+      gain.gain.exponentialRampToValueAtTime(peak, start + attack);
+      gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+      let head = gain;
+      if (o.pan !== undefined && context.createStereoPanner) { const pan = context.createStereoPanner(); pan.pan.value = o.pan; gain.connect(pan); head = pan; }
+      head.connect(o.music ? audioNodes.music : audioNodes.sfx);
+      if (o.reverb) { const rv = context.createGain(); rv.gain.value = o.reverb; head.connect(rv); rv.connect(audioNodes.send); }
+      let input = gain;
+      if (o.filter) {
+        const filter = context.createBiquadFilter(); filter.type = o.filter.type || 'lowpass';
+        filter.frequency.setValueAtTime(o.filter.freq, start); filter.Q.value = o.filter.q ?? .7;
+        if (o.filter.to) filter.frequency.exponentialRampToValueAtTime(o.filter.to, start + duration);
+        filter.connect(gain); input = filter;
+      }
+      const partials = o.partials || [[1, 1]];
+      const oscillators = partials.map(([ratio, level]) => {
+        const osc = context.createOscillator(); osc.type = o.type || 'sine';
+        osc.frequency.setValueAtTime(freq * ratio, start);
+        if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to * ratio, start + duration);
+        if (o.detune) osc.detune.value = o.detune * (ratio > 1 ? -1 : 1);
+        if (level === 1) osc.connect(input);
+        else { const lv = context.createGain(); lv.gain.value = level; osc.connect(lv); lv.connect(input); }
+        osc.start(start); osc.stop(start + duration + .05);
+        return osc;
+      });
+      activeVoices += 1;
+      oscillators[0].onended = () => { activeVoices = Math.max(0, activeVoices - 1); };
+    } catch (_) { /* audio facultatif */ }
+  }
+
+  // Cloche douce : fondamentale + harmoniques à décroissance rapide.
+  const bell = (midi, start, o = {}) => voice(midiToHz(midi), start, o.dur ?? .55, { type: 'sine', gain: o.gain ?? .05, attack: .004, partials: [[1, 1], [2.01, .32], [3.98, .12]], reverb: o.reverb ?? .5, pan: o.pan });
+  // Bruit filtré (souffle / impact).
+  function noiseHit(start, duration, o = {}) {
+    const context = audioContext; if (!context || !audioNodes) return;
+    try {
+      const source = context.createBufferSource(); source.buffer = audioNodes.noise; source.loop = true;
+      const filter = context.createBiquadFilter(); filter.type = o.type || 'bandpass'; filter.Q.value = o.q ?? .9;
+      filter.frequency.setValueAtTime(o.freq ?? 1800, start);
+      if (o.to) filter.frequency.exponentialRampToValueAtTime(o.to, start + duration);
+      const gain = context.createGain(); const peak = Math.max(.0008, (o.gain ?? .03) * profile.volume);
+      gain.gain.setValueAtTime(.0001, start); gain.gain.exponentialRampToValueAtTime(peak, start + (o.attack ?? .004)); gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+      source.connect(filter); filter.connect(gain); gain.connect(audioNodes.sfx);
+      if (o.reverb) { const rv = context.createGain(); rv.gain.value = o.reverb; gain.connect(rv); rv.connect(audioNodes.send); }
+      source.start(start, Math.random() * .5); source.stop(start + duration + .05);
     } catch (_) { /* audio facultatif */ }
   }
 
   function playSfx(name, level = 1) {
     if (!profile.sound || profile.volume <= 0) return;
-    const patterns = {
-      button: [[540, .045, 'triangle', .03]],
-      select: [[640, .045, 'sine', .034], [820, .055, 'triangle', .024]],
-      place: [[360, .045, 'triangle', .034], [520, .065, 'sine', .026]],
-      clear: [[520, .055, 'triangle', .04], [700, .08, 'sine', .03]],
-      'multi-clear': [[430, .055, 'triangle', .038], [620, .065, 'triangle', .04], [860, .11, 'sine', .034]],
-      combo: [[480 + level * 18, .05, 'triangle', .035], [680 + level * 35, .07, 'sine', .035], [900 + level * 55, .11, 'sine', .028]],
-      booster: [[390, .05, 'square', .025], [760, .1, 'triangle', .04]],
-      coins: [[620, .05, 'triangle', .03], [790, .06, 'triangle', .034], [1020, .11, 'sine', .03]],
-      xp: [[460, .05, 'sine', .027], [650, .06, 'triangle', .032], [860, .1, 'sine', .028]],
-      unlock: [[480, .06, 'triangle', .03], [720, .07, 'triangle', .035], [1060, .13, 'sine', .034]],
-      purchase: [[420, .05, 'square', .022], [600, .07, 'triangle', .03], [820, .11, 'sine', .03]],
-      record: [[560, .06, 'triangle', .03], [760, .07, 'triangle', .034], [1000, .09, 'sine', .038], [1320, .15, 'sine', .032]],
-      gameOver: [[420, .08, 'sine', .03], [330, .1, 'triangle', .03], [240, .15, 'sine', .028]],
-      start: [[440, .05, 'triangle', .025], [660, .09, 'sine', .032]]
+    const context = getAudioContext(); if (!context || context.state === 'suspended') return;
+    const t = context.currentTime + .005;
+    const lv = clamp(level, 1, 4);
+    switch (name) {
+      case 'select': bell(81, t, { dur: .22, gain: .03, reverb: .2 }); break;
+      case 'place':
+        voice(190, t, .13, { type: 'sine', to: 78, gain: .075, attack: .003 });
+        noiseHit(t, .05, { type: 'lowpass', freq: 2400, to: 500, gain: .035, q: .5 });
+        bell(69 + (state.turn % 3) * 2, t + .02, { dur: .25, gain: .02, reverb: .25 });
+        break;
+      case 'error':
+        voice(150, t, .13, { type: 'triangle', to: 105, gain: .05, filter: { freq: 700 } });
+        voice(130, t + .09, .14, { type: 'triangle', to: 90, gain: .045, filter: { freq: 600 } });
+        break;
+      case 'clear': case 'multi-clear': {
+        const root = 72; const count = name === 'multi-clear' ? 3 + lv : 3;
+        noiseHit(t, .38, { type: 'bandpass', freq: 500, to: 5200, q: 1.2, gain: .028 + lv * .005, attack: .12, reverb: .35 });
+        for (let i = 0; i < count; i++) bell(pentaMidi(root, i * 1) + (i > 4 ? 0 : 0), t + .04 + i * .055, { dur: .7, gain: .05 - i * .003, reverb: .6, pan: (i / Math.max(1, count - 1) - .5) * .6 });
+        voice(midiToHz(root - 24), t, .3, { type: 'sine', to: midiToHz(root - 29), gain: .06 });
+        break;
+      }
+      case 'combo': {
+        const root = 74 + lv * 2;
+        [0, 2, 4].forEach((step, i) => bell(pentaMidi(root, step + lv), t + .02 + i * .06, { dur: .5, gain: .04, reverb: .55 }));
+        voice(midiToHz(root + 12), t + .2, .35, { type: 'triangle', gain: .02, partials: [[1, 1], [1.5, .4]], reverb: .6 });
+        break;
+      }
+      case 'booster':
+        voice(260, t, .32, { type: 'sawtooth', to: 880, gain: .032, filter: { freq: 500, to: 3200, q: 3 }, reverb: .3 });
+        bell(88, t + .22, { dur: .5, gain: .04 }); bell(93, t + .3, { dur: .55, gain: .035 });
+        break;
+      case 'coins': [88, 93, 100].forEach((m, i) => bell(m, t + i * .06, { dur: .4, gain: .04, reverb: .3 })); break;
+      case 'xp': [76, 79, 83, 88].forEach((m, i) => bell(m, t + i * .07, { dur: .5, gain: .035, reverb: .5 })); break;
+      case 'unlock': [72, 76, 79, 84].forEach((m, i) => bell(m, t + i * .09, { dur: .9, gain: .045, reverb: .7 })); break;
+      case 'purchase': bell(79, t, { dur: .3, gain: .045 }); bell(86, t + .08, { dur: .5, gain: .045 }); noiseHit(t + .1, .12, { type: 'highpass', freq: 5000, gain: .02 }); break;
+      case 'record':
+        [72, 76, 79, 84, 88].forEach((m, i) => bell(m, t + i * .1, { dur: 1.1, gain: .05, reverb: .8, pan: (i - 2) * .2 }));
+        [48, 55].forEach(m => voice(midiToHz(m), t, 1.2, { type: 'triangle', gain: .04, attack: .05, filter: { freq: 600 }, reverb: .5 }));
+        break;
+      case 'gameOver':
+        [69, 65, 62, 57].forEach((m, i) => voice(midiToHz(m), t + i * .16, .75, { type: 'triangle', gain: .05, attack: .02, filter: { freq: 1400, to: 400 }, reverb: .7 }));
+        break;
+      case 'morph':
+        voice(180, t, .75, { type: 'sawtooth', to: 1200, gain: .028, filter: { freq: 400, to: 4200, q: 4 }, reverb: .5 });
+        [76, 83, 88, 95].forEach((m, i) => bell(m, t + .35 + i * .08, { dur: .8, gain: .035, reverb: .7 }));
+        break;
+      case 'start': bell(72, t, { dur: .35, gain: .035 }); bell(79, t + .08, { dur: .5, gain: .04 }); break;
+      case 'button': default: voice(1200, t, .06, { type: 'triangle', gain: .028, to: 900 });
+    }
+  }
+
+  /* ----- Musique d'ambiance générative (nappes + arpèges pentatoniques) ----- */
+  const MUSIC = {
+    bpm: 68, timer: null, nextBar: 0, bar: 0,
+    chords: [[57, 60, 64, 67], [53, 57, 60, 64], [48, 55, 60, 64], [55, 59, 62, 67]]
+  };
+  const musicTarget = () => clamp(profile.volume, 0, 1) * .55;
+  function updateMusicVolume() {
+    if (!audioContext || !audioNodes) return;
+    audioNodes.music.gain.setTargetAtTime(profile.music ? musicTarget() : 0, audioContext.currentTime, .6);
+  }
+  function scheduleMusic() {
+    const context = audioContext; if (!context || !profile.music) return;
+    const beat = 60 / MUSIC.bpm; const barLength = beat * 4;
+    if (MUSIC.nextBar < context.currentTime) MUSIC.nextBar = context.currentTime + .08;
+    // Pendant un drag on ne planifie rien : le téléphone reste 100 % dédié au doigt.
+    if (document.documentElement.classList.contains('is-dragging')) return;
+    while (MUSIC.nextBar < context.currentTime + 1.6) {
+      const start = MUSIC.nextBar; const chord = MUSIC.chords[MUSIC.bar % MUSIC.chords.length];
+      chord.forEach((m, i) => voice(midiToHz(m + (i === 0 ? -12 : 0)), start, barLength + 1.2, { type: i === 0 ? 'sine' : 'triangle', gain: i === 0 ? .05 : .026, attack: 1.1, filter: { freq: 900, q: .5 }, detune: i * 3, music: true, reverb: .4 }));
+      for (let step = 0; step < 8; step++) {
+        if (Math.random() < .5) {
+          const note = pentaMidi(69, Math.floor(Math.random() * 7) - 1);
+          voice(midiToHz(note + 12), start + step * beat / 2, 1.1, { type: 'sine', gain: .028, attack: .01, partials: [[1, 1], [2.01, .25]], music: true, reverb: .9, pan: Math.random() - .5 });
+        }
+      }
+      MUSIC.nextBar += barLength; MUSIC.bar += 1;
+    }
+  }
+  function startMusic() {
+    if (!profile.music) return;
+    const context = getAudioContext(); if (!context) return;
+    updateMusicVolume();
+    if (MUSIC.timer) return;
+    MUSIC.nextBar = context.currentTime + .1;
+    scheduleMusic(); MUSIC.timer = setInterval(scheduleMusic, 300);
+  }
+  function stopMusic() {
+    if (MUSIC.timer) { clearInterval(MUSIC.timer); MUSIC.timer = null; }
+    updateMusicVolume();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (MUSIC.timer) { clearInterval(MUSIC.timer); MUSIC.timer = null; } audioContext?.suspend?.().catch?.(() => {}); }
+    else if (profile.music && profile.sound !== undefined) { getAudioContext(); startMusic(); }
+  });
+
+
+  /* =====================================================================
+     SHAPES — runtime : progression, maîtrise, écrans, transition
+     ===================================================================== */
+  const shapeDef = id => SHAPE_BOARDS.find(board => board.id === id) || SHAPE_BOARDS[0];
+  const shapeIndexOf = id => Math.max(0, SHAPE_BOARDS.findIndex(board => board.id === id));
+  const shapesProgress = (id = geo.id) => profile.shapes.boards[id] || (profile.shapes.boards[id] = defaultBoardProgress());
+  // Statistiques et record dépendent du mode : rien n'est mélangé entre Classic et Shapes.
+  const modeStats = () => (state.mode === 'shapes' ? profile.shapes.stats : profile.stats);
+  const getBest = () => (state.mode === 'shapes' ? shapesProgress().bestScore : profile.best);
+  const isShapeUnlocked = id => {
+    const index = shapeIndexOf(id);
+    return index === 0 || profile.shapes.boards[SHAPE_BOARDS[index - 1].id]?.mastered === true;
+  };
+  const suggestedShapesBoard = () => {
+    const open = SHAPE_BOARDS.find(board => isShapeUnlocked(board.id) && !profile.shapes.boards[board.id].mastered);
+    return open ? open.id : profile.shapes.current;
+  };
+
+  // Objectifs de maîtrise d'un plateau : cumulés (lignes, spéciales) ou records (combo, score).
+  // Ils reprennent les systèmes déjà présents dans le jeu (lignes, combos, score) et ajoutent
+  // un objectif propre à chaque géométrie (lignes longues, diagonales, bords, zones…).
+  function shapeObjectives(def, prog, live = null) {
+    const m = def.mastery;
+    const score = Math.max(prog.bestScore, live ? live.score : 0);
+    const list = [
+      { key: 'lines', label: 'Lignes dissoutes', value: prog.lines, target: m.lines },
+      { key: 'combo', label: 'Meilleur combo', value: prog.bestCombo, target: m.combo, prefix: '×' },
+      { key: 'score', label: 'Score en une partie', value: score, target: m.score }
+    ];
+    if (m.special) list.push({ key: 'special', label: def.specialLabel || 'Lignes spéciales', value: prog.special, target: m.special });
+    return list;
+  }
+  function shapeMasteryPct(def, prog, live = null) {
+    if (prog.mastered) return 100;
+    const objectives = shapeObjectives(def, prog, live);
+    const ratio = objectives.reduce((sum, o) => sum + clamp(o.value / o.target, 0, 1), 0) / objectives.length;
+    return Math.min(99, Math.floor(ratio * 100));
+  }
+  function objectivesHTML(def, prog, live = null) {
+    return `<div class="objectives">${shapeObjectives(def, prog, live).map(o => {
+      const done = o.value >= o.target;
+      const shown = Math.min(o.value, o.target);
+      const prefix = o.prefix || '';
+      return `<div class="obj${done ? ' done' : ''}"><div class="obj-row"><span>${done ? '✓ ' : ''}${o.label}</span><b>${prefix}${formatNumber(shown)} / ${prefix}${formatNumber(o.target)}</b></div><div class="mini-progress"><span style="width:${clamp(o.value / o.target * 100, 0, 100)}%"></span></div></div>`;
+    }).join('')}</div>`;
+  }
+
+  // Aperçu miniature d'une géométrie (cases existantes uniquement).
+  function shapeMiniHTML(def, extraClass = '') {
+    const g = getGeometry(def);
+    let cells = '';
+    for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) cells += `<i${g.mask[r][c] ? ' class="on"' : ''}></i>`;
+    return `<span class="shape-mini ${extraClass}" style="--sm-cols:${g.cols};--sm-rows:${g.rows};--sm-max:${Math.max(g.rows, g.cols)};--sm-accent:${def.accent}">${cells}</span>`;
+  }
+
+  // Transformation réelle d'un plateau en un autre : chaque case apparaît / disparaît / change de couleur.
+  function shapeMorphHTML(fromDef, toDef) {
+    const a = getGeometry(fromDef); const b = getGeometry(toDef);
+    const rows = Math.max(a.rows, b.rows); const cols = Math.max(a.cols, b.cols);
+    const offA = [Math.floor((rows - a.rows) / 2), Math.floor((cols - a.cols) / 2)];
+    const offB = [Math.floor((rows - b.rows) / 2), Math.floor((cols - b.cols) / 2)];
+    const inGeo = (g, off, r, c) => { const rr = r - off[0]; const cc = c - off[1]; return rr >= 0 && cc >= 0 && rr < g.rows && cc < g.cols && g.mask[rr][cc]; };
+    let cells = '';
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const inA = inGeo(a, offA, r, c); const inB = inGeo(b, offB, r, c);
+      const dist = Math.hypot(r - (rows - 1) / 2, c - (cols - 1) / 2);
+      cells += `<i class="${inA ? 'a ' : ''}${inB ? 'b' : ''}" style="--d:${Math.round(dist * 55)}ms"></i>`;
+    }
+    return `<div class="morph-stage" style="--mm-cols:${cols};--mm-rows:${rows};--mm-max:${Math.max(rows, cols)};--ma:${fromDef.accent};--mb:${toDef.accent}">${cells}</div>`;
+  }
+
+  /* ----- Géométrie active + mise en page dynamique du plateau ----- */
+  function activateBoard(mode, boardId) {
+    const def = mode === 'shapes' ? shapeDef(boardId) : CLASSIC_DEF;
+    geo = getGeometry(def);
+    state.boardMetricsCache = null;
+    applyBoardLayout();
+  }
+
+  // La grille DOM reste rectangulaire (le drag n'en dépend pas) ; seule la taille et le ratio changent.
+  // Tout est calculé à partir de rows/cols : aucune coordonnée fixe.
+  function applyBoardLayout() {
+    const wrap = $('#board-wrap'); const board = $('#board');
+    if (!wrap || !board) return;
+    const shaped = state.mode === 'shapes';
+    const { rows, cols } = geo;
+    if (shaped) {
+      wrap.style.setProperty('--bar', `${cols} / ${rows}`);
+      wrap.style.setProperty('--bk', String(cols >= rows ? 1 : +(cols / rows).toFixed(4)));
+      wrap.style.setProperty('--shape-accent', geo.def.accent);
+      wrap.dataset.shape = geo.id;
+    } else {
+      wrap.style.removeProperty('--bar'); wrap.style.removeProperty('--bk'); wrap.style.removeProperty('--shape-accent');
+      delete wrap.dataset.shape;
+    }
+    wrap.classList.toggle('shaped', shaped && !geo.full);
+    board.style.setProperty('--cols', cols);
+    board.style.setProperty('--rows', rows);
+    state.boardMetricsCache = null;
+  }
+
+  function renderShapeHud() {
+    const hud = $('#shape-hud'); if (!hud) return;
+    const shaped = state.mode === 'shapes';
+    hud.classList.toggle('hidden', !shaped);
+    if (!shaped) return;
+    const def = shapeDef(geo.id);
+    const pct = shapeMasteryPct(def, shapesProgress(), { score: state.score });
+    hud.style.setProperty('--shape-accent', def.accent);
+    $('#shape-hud-icon').textContent = def.icon;
+    $('#shape-hud-name').textContent = def.name.toUpperCase();
+    $('#shape-hud-fill').style.width = `${pct}%`;
+    $('#shape-hud-pct').textContent = `${pct}%`;
+  }
+
+  /* ----- Progression : appelée à chaque coup, avant la fin de tour ----- */
+  function trackShapesProgress(completed) {
+    if (state.mode !== 'shapes') return;
+    const def = shapeDef(geo.id); const prog = shapesProgress();
+    if (completed && completed.count) {
+      prog.lines += completed.count;
+      prog.special += completed.lines.filter(line => line.special).length;
+      prog.bestCombo = Math.max(prog.bestCombo, state.combo);
+    }
+    prog.bestScore = Math.max(prog.bestScore, state.score);
+    if (!prog.mastered && shapeObjectives(def, prog).every(o => o.value >= o.target)) {
+      prog.mastered = true;
+      profile.coins += def.reward.coins;
+      const levels = addXp(def.reward.xp);
+      const next = SHAPE_BOARDS[shapeIndexOf(def.id) + 1] || null;
+      state.pendingMastery = def.id;
+      state.masteryNext = next ? next.id : null;
+      state.masteryReward = { coins: def.reward.coins, xp: def.reward.xp, levels };
+      saveProfile();
+      if (state.gameActive) {
+        setTimeout(() => { if (state.gameActive && state.pendingMastery === def.id) showMasteryCelebration(); }, 950);
+      }
+    }
+  }
+
+  /* ----- Plateau maîtrisé : transition + découverte de la forme suivante ----- */
+  function showMasteryCelebration() {
+    const id = state.pendingMastery; if (!id) return;
+    const def = shapeDef(id);
+    const next = state.masteryNext ? shapeDef(state.masteryNext) : null;
+    const reward = state.masteryReward || def.reward;
+    const live = state.gameActive;
+    state.pendingMastery = null;
+    cancelDrag();
+    state.paused = true;
+    const stage = next ? shapeMorphHTML(def, next) : `<div class="intro-shape">${shapeMiniHTML(def, 'big')}</div>`;
+    const reveal = next
+      ? `<div class="morph-reveal"><small>NOUVEAU PLATEAU</small><strong>${next.name.toUpperCase()}</strong><p>${next.rule}</p></div>`
+      : `<div class="morph-reveal"><small>BRAVO</small><strong>TOUTES LES FORMES</strong><p>Tu as maîtrisé tous les plateaux disponibles. De nouvelles géométries arriveront bientôt.</p></div>`;
+    const recap = live ? '' : `<div class="result-score"><span>SCORE</span><strong>${formatNumber(state.score)}</strong></div>`;
+    const actions = live
+      ? `<button class="secondary" data-action="close-modal">CONTINUER</button>${next ? `<button class="primary" data-action="shapes-next">DÉCOUVRIR →</button>` : `<button class="primary" data-action="close-modal">SUPER !</button>`}`
+      : `<button class="secondary" data-action="go-home">ACCUEIL</button><button class="secondary" data-action="restart">REJOUER</button>${next ? `<button class="primary" data-action="shapes-next">SUIVANT →</button>` : ''}`;
+    openModal(`<span class="modal-kicker record-kicker">🎉 PLATEAU MAÎTRISÉ !</span><h2>${def.name} ✓</h2>${stage}${recap}<div class="reward-row"><div>◆ ${reward.coins}<span>PulseCoins</span></div><div>✦ ${reward.xp}<span>XP gagnés</span></div></div>${reveal}<div class="modal-actions">${actions}</div>`, 'mastery-modal');
+    setTimeout(() => $('#modal-card .morph-stage')?.classList.add('go'), 750);
+    renderShapesHome();
+    playSfx('record'); setTimeout(() => playSfx('morph'), 700); setTimeout(() => playSfx('unlock'), 1500);
+    vibrate([28, 14, 52]); setTimeout(() => vibrate([14, 10, 14, 10, 30]), 750);
+  }
+
+  function startNextShapesBoard() {
+    const nextId = state.masteryNext || SHAPE_BOARDS[Math.min(SHAPE_BOARDS.length - 1, shapeIndexOf(geo.id) + 1)].id;
+    closeModal();
+    if (state.gameActive) endGame({ silent: true });
+    shapesProgress(nextId).seen = true;
+    startNewGame('shapes', nextId);
+  }
+
+  function openBoardIntro(def) {
+    state.paused = true;
+    openModal(`<span class="modal-kicker">NOUVEAU PLATEAU</span><div class="intro-shape">${shapeMiniHTML(def, 'big')}</div><h2>${def.name}</h2><p>${def.rule}</p>${objectivesHTML(def, shapesProgress(def.id))}<div class="modal-actions"><button class="primary" data-action="close-modal">JOUER</button></div>`, 'intro-modal');
+  }
+
+  function shapesEndBlock() {
+    if (state.mode !== 'shapes') return '';
+    const def = shapeDef(geo.id); const prog = shapesProgress(def.id);
+    const pct = shapeMasteryPct(def, prog);
+    return `<div class="end-shape"><div class="row-between"><span>${def.icon} ${def.name.toUpperCase()} · maîtrise</span><b>${pct} %</b></div>${objectivesHTML(def, prog)}</div>`;
+  }
+
+  /* ----- Écrans ----- */
+  function renderShapesHome() {
+    const card = $('#shapes-card'); if (!card) return;
+    const def = shapeDef(suggestedShapesBoard());
+    const prog = shapesProgress(def.id);
+    const pct = shapeMasteryPct(def, prog);
+    const mastered = SHAPE_BOARDS.filter(board => profile.shapes.boards[board.id]?.mastered).length;
+    card.style.setProperty('--world-accent', def.accent);
+    $('#shapes-card-visual').innerHTML = shapeMiniHTML(def, 'card');
+    $('#shapes-card-board').textContent = `${def.icon} ${def.name.toUpperCase()}`;
+    $('#shapes-card-pct').textContent = `${pct} %`;
+    $('#shapes-card-fill').style.width = `${pct}%`;
+    $('#shapes-card-text').textContent = `${mastered} / ${SHAPE_BOARDS.length} plateaux maîtrisés · ${def.tagline}`;
+  }
+
+  function renderShapes() {
+    const root = $('#shapes-content'); if (!root) return;
+    const masteredCount = SHAPE_BOARDS.filter(board => profile.shapes.boards[board.id].mastered).length;
+    const globalPct = Math.round(masteredCount / SHAPE_BOARDS.length * 100);
+    const suggested = suggestedShapesBoard();
+    const intro = `<article class="shapes-intro"><span class="eyebrow accent">PARCOURS DES FORMES</span><h2>${masteredCount} / ${SHAPE_BOARDS.length} plateaux maîtrisés</h2><p>Remplis les objectifs d'un plateau pour le maîtriser et débloquer la forme suivante.</p><div class="mini-progress"><span style="width:${globalPct}%"></span></div></article>`;
+    const cards = SHAPE_BOARDS.map((def, index) => {
+      const prog = profile.shapes.boards[def.id];
+      const unlocked = isShapeUnlocked(def.id);
+      const pct = shapeMasteryPct(def, prog);
+      const status = prog.mastered ? 'mastered' : !unlocked ? 'locked' : def.id === suggested ? 'current' : 'open';
+      const badge = prog.mastered ? '✓ MAÎTRISÉ' : !unlocked ? '🔒 VERROUILLÉ' : def.id === suggested ? 'EN COURS' : 'DISPONIBLE';
+      const previous = SHAPE_BOARDS[index - 1];
+      const body = unlocked
+        ? `<p class="world-rule">${def.rule}</p>${objectivesHTML(def, prog)}<div class="world-actions"><button class="primary-button" data-action="play-shapes" data-shape-id="${def.id}"><span>${prog.mastered ? 'REJOUER' : 'JOUER'}</span><b>→</b></button></div>`
+        : `<p class="world-lock">Maîtrise le plateau <b>${previous.name}</b> (100 %) pour débloquer cette forme.</p><p class="world-rule faint">${def.specialLabel ? `Nouveauté : ${def.specialLabel.toLowerCase()}.` : def.tagline}</p>`;
+      return `<article class="world-card ${status}" style="--world-accent:${def.accent}" data-shape-id="${def.id}"><div class="world-head">${shapeMiniHTML(def)}<div class="world-title"><span class="eyebrow">PLATEAU ${index + 1} · ${def.tagline.toUpperCase()}</span><strong>${def.name}</strong></div><span class="world-badge">${badge}</span></div><div class="world-progress"><div class="mini-progress"><span style="width:${pct}%"></span></div><b>${pct} %</b></div>${body}</article>`;
+    });
+    root.innerHTML = intro + cards.join('<div class="world-link" aria-hidden="true"></div>');
+  }
+
+  function shapesStatsHTML() {
+    const s = profile.shapes.stats;
+    const mastered = SHAPE_BOARDS.filter(board => profile.shapes.boards[board.id].mastered).length;
+    const bests = SHAPE_BOARDS.filter(board => isShapeUnlocked(board.id)).map(board => `<div class="shape-best"><span>${board.icon} ${board.name}</span><b>${formatNumber(profile.shapes.boards[board.id].bestScore)}</b></div>`).join('');
+    return `<div class="section-heading"><h2>Shapes</h2><span class="section-line"></span></div><div class="stats-grid"><article class="stat-box"><span>Plateaux maîtrisés</span><strong>${mastered} / ${SHAPE_BOARDS.length}</strong><em>progression Shapes</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(s.games)}</strong><em>mode Shapes</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(s.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(s.bestCombo)}</strong><em>chaîne maximale</em></article></div><div class="shape-bests">${bests}</div>`;
+  }
+
+
+  /* =====================================================================
+     Reprise de partie + bonus quotidien
+     ===================================================================== */
+  function snapshotRun() {
+    return {
+      mode: state.mode, boardId: geo.id, at: Date.now(),
+      board: state.board.map(row => row.map(cell => (cell ? cell.piece : null))),
+      queue: state.queue.map(piece => (piece ? piece.id : null)),
+      score: state.score, lines: state.lines, combo: state.combo, turn: state.turn, charge: state.charge,
+      pulseBursts: state.pulseBursts, bestComboInGame: state.bestComboInGame, bestAtStart: state.bestAtStart
     };
-    (patterns[name] || patterns.button).forEach(([frequency, duration, type, gain], index) => {
-      setTimeout(() => playTone(frequency, duration, { type, gain }), index * 62);
+  }
+  function validRun(run) {
+    if (!run || (run.mode !== 'classic' && run.mode !== 'shapes')) return false;
+    if (run.mode === 'shapes' && (!SHAPE_BOARDS.some(b => b.id === run.boardId) || !isShapeUnlocked(run.boardId))) return false;
+    const g = getGeometry(run.mode === 'shapes' ? shapeDef(run.boardId) : CLASSIC_DEF);
+    if (run.board.length !== g.rows || !run.board.every(row => Array.isArray(row) && row.length === g.cols)) return false;
+    if (!run.board.every((row, r) => row.every((id, c) => id === null || (SHAPE_BY_ID[id] && g.mask[r][c])))) return false;
+    return run.queue.length === QUEUE_SIZE;
+  }
+  function resumeRun() {
+    const run = profile.run;
+    if (!validRun(run)) { profile.run = null; saveProfile(); renderHome(); showToast('Cette partie ne peut pas être reprise.'); return; }
+    startNewGame(run.mode, run.boardId);
+    state.board = run.board.map(row => row.map(id => (id ? { piece: id, color: getPieceColor(id) } : null)));
+    state.queue = run.queue.map(id => (id && SHAPE_BY_ID[id] ? makePiece(SHAPE_BY_ID[id]) : null));
+    if (state.queue.every(piece => !piece)) state.queue = generateQueue();
+    ['score', 'lines', 'combo', 'turn', 'charge', 'pulseBursts', 'bestComboInGame', 'bestAtStart'].forEach(key => { state[key] = Number(run[key]) || 0; });
+    state.recordAnnounced = state.bestAtStart > 0 && state.score > state.bestAtStart;
+    renderBoard(); renderTray(); renderHud(); renderBoosters(); animateTrayArrival();
+    $('#game-message').textContent = 'Partie reprise. À toi de jouer.';
+    profile.run = snapshotRun(); saveProfile();
+  }
+
+  const DAILY_REWARDS = [30, 40, 50, 60, 80, 100, 160];
+  const dateKeyOffset = days => { const d = new Date(); d.setDate(d.getDate() + days); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  function dailyStatus() {
+    const claimed = profile.daily.last === dateKey();
+    const day = claimed ? profile.daily.streak : (profile.daily.last === dateKeyOffset(-1) ? profile.daily.streak + 1 : 1);
+    return { claimed, day, reward: DAILY_REWARDS[(day - 1) % DAILY_REWARDS.length] };
+  }
+  function claimDaily() {
+    const status = dailyStatus(); if (status.claimed) return;
+    profile.daily = { last: dateKey(), streak: status.day };
+    profile.coins += status.reward; checkAchievements();
+    saveProfile(); renderHome();
+    showRewardPopup(`+${status.reward} ◆`, 'coins'); playSfx('coins'); vibrate([14, 10, 24]);
+  }
+  function renderHomeExtras() {
+    const resume = $('#resume-card');
+    if (resume) {
+      const run = validRun(profile.run) ? profile.run : null;
+      resume.classList.toggle('hidden', !run);
+      if (run) {
+        const label = run.mode === 'shapes' ? `SHAPES · ${shapeDef(run.boardId).name.toUpperCase()}` : 'CLASSIC';
+        $('#resume-card-text').textContent = `${label} · ${formatNumber(run.score)} pts`;
+      }
+    }
+    const daily = $('#daily-bonus');
+    if (daily) {
+      const s = dailyStatus();
+      daily.classList.toggle('claimed', s.claimed);
+      $('#daily-bonus-title').textContent = s.claimed ? `Série de ${s.day} jour${s.day > 1 ? 's' : ''}` : `Jour ${s.day} · +${s.reward} ◆`;
+      $('#daily-bonus-text').textContent = s.claimed ? 'Reviens demain pour continuer ta série.' : 'Connexion quotidienne : plus la série est longue, plus c\u2019est généreux.';
+      const button = $('#daily-bonus-button'); button.textContent = s.claimed ? '✓' : 'RÉCUPÉRER'; button.disabled = s.claimed;
+    }
+    const themeLabel = $('#theme-label'); if (themeLabel) themeLabel.textContent = profile.ui === 'dark' ? 'SOMBRE' : 'CLAIR';
+    const hapticLabel = $('#haptics-label'); if (hapticLabel) hapticLabel.textContent = profile.haptics ? 'ON' : 'OFF';
+  }
+
+  /* =====================================================================
+     PARAMÈTRES : affichage, export / import, réinitialisations
+     ===================================================================== */
+  function renderSettings() {
+    const pressed = { 'toggle-theme': profile.ui !== 'dark', 'toggle-haptics': profile.haptics, 'toggle-motion': profile.reduceMotion, 'toggle-tip': profile.showTip };
+    Object.entries(pressed).forEach(([action, value]) => $$(`[data-action="${action}"]`).forEach(button => button.setAttribute('aria-pressed', String(Boolean(value)))));
+    const motion = $('#motion-label'); if (motion) motion.textContent = profile.reduceMotion ? 'ON' : 'OFF';
+    const tip = $('#tip-label'); if (tip) tip.textContent = profile.showTip ? 'ON' : 'OFF';
+    renderHomeExtras();
+    const version = $('#settings-version'); if (version) version.textContent = APP_VERSION;
+    renderInstall();
+    const summary = $('#settings-summary');
+    if (summary) summary.textContent = `Niveau ${profile.level} · ${formatNumber(profile.coins)} ◆ · ${profile.stats.games + profile.shapes.stats.games} parties jouées`;
+  }
+
+  // Tout ce qui dépend du profil est redessiné d'un coup (import ou réinitialisation).
+  function refreshAll() {
+    cancelDrag(); closeModal();
+    state.gameActive = false; state.paused = false; state.resolving = false; state.activeBooster = null; state.selectedPiece = null;
+    applyTheme(); renderHome(); renderMissions(); renderShop(); renderCollection(); renderStats(); renderProgression(); renderShapes(); renderSettings(); renderTrophies();
+    updateMusicVolume();
+    if (profile.music) startMusic(); else stopMusic();
+  }
+
+  function saveText() { return JSON.stringify({ ...profile, run: null, exportedAt: new Date().toISOString(), app: 'pulse-grid', version: APP_VERSION }); }
+
+  function exportSave() {
+    try {
+      const blob = new Blob([saveText()], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = `pulse-grid-sauvegarde-${dateKey()}.json`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showToast('Sauvegarde exportée.'); playSfx('purchase'); vibrate(12);
+    } catch (_) { showToast('Export impossible sur ce navigateur. Essaie « Copier ».'); }
+  }
+
+  function copySave() {
+    const text = saveText();
+    const done = () => { showToast('Sauvegarde copiée dans le presse-papiers.'); playSfx('purchase'); vibrate(12); };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(() => showToast('Copie refusée par le navigateur.'));
+    else showToast('Copie impossible ici. Utilise « Exporter ».');
+  }
+
+  // Une sauvegarde importée est validée puis normalisée par loadProfile() : tout champ manquant reçoit sa valeur par défaut.
+  function importSave(text) {
+    let parsed = null;
+    try { parsed = JSON.parse(text); } catch (_) { parsed = null; }
+    const looksRight = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && ['coins', 'best', 'level', 'xp', 'unlocked'].some(key => key in parsed);
+    if (!looksRight) { showToast('Ce fichier n\u2019est pas une sauvegarde Pulse Grid.'); playSfx('error'); return false; }
+    delete parsed.run;
+    let previous = null;
+    try { previous = localStorage.getItem(SAVE_KEY); localStorage.setItem(SAVE_KEY, JSON.stringify(parsed)); } catch (_) { showToast('Import impossible : stockage indisponible.'); return false; }
+    try { profile = loadProfile(); } catch (_) {
+      try { if (previous !== null) localStorage.setItem(SAVE_KEY, previous); } catch (__) { /* rien */ }
+      profile = loadProfile(); showToast('Sauvegarde illisible, rien n\u2019a changé.'); return false;
+    }
+    refreshAll(); profile.run = null; saveProfile(); showToast('Sauvegarde importée.'); playSfx('unlock'); vibrate([14, 10, 24]);
+    return true;
+  }
+
+  const RESET_COPY = {
+    classic: { title: 'Remettre Classic à zéro ?', text: 'Ton meilleur score et les statistiques Classic seront effacés. Niveau, pièces, objets et progression Shapes sont conservés.' },
+    shapes: { title: 'Remettre Shapes à zéro ?', text: 'Tous les plateaux redeviennent verrouillés sauf le carré. Niveau, pièces, objets et record Classic sont conservés.' },
+    all: { title: 'Tout effacer ?', text: 'Niveau, pièces, objets, missions, records et progression seront définitivement supprimés. Pense à exporter ta sauvegarde avant.' }
+  };
+  function askReset(scope) {
+    const copy = RESET_COPY[scope]; if (!copy) return;
+    openModal(`<span class="modal-kicker confirm-warn">ATTENTION</span><h2>${copy.title}</h2><p>${copy.text}</p><div class="modal-actions"><button class="secondary" data-action="close-modal">ANNULER</button><button class="primary" data-action="confirm-reset" data-scope="${scope}">CONFIRMER</button></div>`);
+  }
+  function doReset(scope) {
+    if (!RESET_COPY[scope]) return;
+    if (scope === 'all') {
+      try { localStorage.removeItem(SAVE_KEY); } catch (_) { /* rien */ }
+      profile = loadProfile();
+    } else if (scope === 'classic') {
+      profile.best = 0; profile.stats = { ...DEFAULT_STATS };
+      if (profile.run?.mode === 'classic') profile.run = null;
+    } else {
+      profile.shapes = defaultShapes(); profile.shapes = normalizeShapes(profile.shapes);
+      if (profile.run?.mode === 'shapes') profile.run = null;
+    }
+    refreshAll(); saveProfile();
+    showToast(scope === 'all' ? 'Toutes les données ont été effacées.' : scope === 'classic' ? 'Classic remis à zéro.' : 'Shapes remis à zéro.');
+    playSfx('button'); vibrate(14);
+  }
+
+  /* =====================================================================
+     TROPHÉES
+     ===================================================================== */
+  const totalOf = key => (profile.stats[key] || 0) + (profile.shapes.stats[key] || 0);
+  const bestScoreAll = () => Math.max(profile.best, ...SHAPE_BOARDS.map(b => profile.shapes.boards[b.id]?.bestScore || 0));
+  const masteredCount = () => SHAPE_BOARDS.filter(b => profile.shapes.boards[b.id]?.mastered).length;
+  const ACHIEVEMENTS = [
+    { id: 'games-1', icon: '🌱', name: 'Premiers pas', desc: 'Termine 1 partie', target: 1, reward: 30, value: () => totalOf('games') },
+    { id: 'games-10', icon: '🎮', name: 'Habitué', desc: 'Termine 10 parties', target: 10, reward: 60, value: () => totalOf('games') },
+    { id: 'games-50', icon: '🕹️', name: 'Accro', desc: 'Termine 50 parties', target: 50, reward: 200, value: () => totalOf('games') },
+    { id: 'lines-25', icon: '▦', name: 'Premières lignes', desc: 'Dissous 25 lignes', target: 25, reward: 40, value: () => totalOf('totalLines') },
+    { id: 'lines-250', icon: '🧱', name: 'Démolisseur', desc: 'Dissous 250 lignes', target: 250, reward: 120, value: () => totalOf('totalLines') },
+    { id: 'lines-1000', icon: '🏗️', name: 'Architecte', desc: 'Dissous 1 000 lignes', target: 1000, reward: 400, value: () => totalOf('totalLines') },
+    { id: 'combo-3', icon: '🔥', name: 'En chaîne', desc: 'Atteins un combo ×3', target: 3, reward: 50, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
+    { id: 'combo-5', icon: '⚡', name: 'Électrique', desc: 'Atteins un combo ×5', target: 5, reward: 120, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
+    { id: 'combo-8', icon: '🌋', name: 'Inarrêtable', desc: 'Atteins un combo ×8', target: 8, reward: 300, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
+    { id: 'score-2000', icon: '⭐', name: 'Bon départ', desc: 'Score de 2 000 en une partie', target: 2000, reward: 50, value: bestScoreAll },
+    { id: 'score-10000', icon: '🌟', name: 'Virtuose', desc: 'Score de 10 000 en une partie', target: 10000, reward: 200, value: bestScoreAll },
+    { id: 'score-30000', icon: '👑', name: 'Légende', desc: 'Score de 30 000 en une partie', target: 30000, reward: 500, value: bestScoreAll },
+    { id: 'pulse-1', icon: '💥', name: 'Surcharge', desc: 'Déclenche 1 Pulse Burst', target: 1, reward: 50, value: () => totalOf('pulseBursts') },
+    { id: 'pulse-10', icon: '☄️', name: 'Réacteur', desc: 'Déclenche 10 Pulse Bursts', target: 10, reward: 180, value: () => totalOf('pulseBursts') },
+    { id: 'perfect-1', icon: '✨', name: 'Plateau vide', desc: 'Vide entièrement le plateau', target: 1, reward: 100, value: () => totalOf('perfectClears') },
+    { id: 'shape-1', icon: '▭', name: 'Explorateur', desc: 'Maîtrise 1 plateau Shapes', target: 1, reward: 100, value: masteredCount },
+    { id: 'shape-3', icon: '◆', name: 'Géomètre', desc: 'Maîtrise 3 plateaux Shapes', target: 3, reward: 250, value: masteredCount },
+    { id: 'shape-5', icon: '●', name: 'Maître des formes', desc: 'Maîtrise 5 plateaux Shapes', target: 5, reward: 600, value: masteredCount },
+    { id: 'level-5', icon: '📈', name: 'Niveau 5', desc: 'Atteins le niveau 5', target: 5, reward: 80, value: () => profile.level },
+    { id: 'level-15', icon: '🚀', name: 'Niveau 15', desc: 'Atteins le niveau 15', target: 15, reward: 300, value: () => profile.level },
+    { id: 'streak-3', icon: '📅', name: 'Fidèle', desc: '3 jours de suite', target: 3, reward: 60, value: () => profile.daily.streak },
+    { id: 'streak-7', icon: '🏅', name: 'Semaine parfaite', desc: '7 jours de suite', target: 7, reward: 200, value: () => profile.daily.streak },
+    { id: 'booster-10', icon: '🧰', name: 'Stratège', desc: 'Utilise 10 bonus', target: 10, reward: 70, value: () => totalOf('boostersUsed') }
+  ];
+  const achValue = id => { const a = ACHIEVEMENTS.find(item => item.id === id); return a ? a.value() : 0; };
+  let trophyQueue = []; let trophyTimer = null;
+
+  function checkAchievements() {
+    let changed = false;
+    ACHIEVEMENTS.forEach(a => {
+      if (profile.achievements[a.id] || a.value() < a.target) return;
+      profile.achievements[a.id] = Date.now(); profile.coins += a.reward; changed = true;
+      trophyQueue.push(a);
+    });
+    if (changed) { saveProfileSoon(); pumpTrophyQueue(); renderTrophyCount(); }
+    return changed;
+  }
+  const saveProfileSoon = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(profile)); } catch (_) { /* rien */ } };
+  function pumpTrophyQueue() {
+    if (trophyTimer || !trophyQueue.length) return;
+    const a = trophyQueue.shift();
+    trophyTimer = setTimeout(() => {
+      showToast(`🏆 ${a.name} · +${a.reward} ◆`); playSfx('unlock'); vibrate([16, 10, 28]);
+      if (state.screen === 'trophies') renderTrophies();
+      trophyTimer = setTimeout(() => { trophyTimer = null; pumpTrophyQueue(); }, 2600);
+    }, 900);
+  }
+  function renderTrophyCount() {
+    const el = $('#home-trophy-count'); if (el) el.textContent = `${Object.keys(profile.achievements).length} / ${ACHIEVEMENTS.length}`;
+  }
+  function renderTrophies() {
+    const root = $('#trophies-content'); if (!root) return;
+    const done = ACHIEVEMENTS.filter(a => profile.achievements[a.id]).length;
+    const pct = Math.round(done / ACHIEVEMENTS.length * 100);
+    const sorted = [...ACHIEVEMENTS].sort((a, b) => (profile.achievements[b.id] ? 1 : 0) - (profile.achievements[a.id] ? 1 : 0) || 0);
+    root.innerHTML = `<article class="shapes-intro"><span class="eyebrow accent">COLLECTION</span><h2>${done} / ${ACHIEVEMENTS.length} trophées</h2><p>Chaque trophée débloqué rapporte des PulseCoins automatiquement.</p><div class="mini-progress"><span style="width:${pct}%"></span></div></article><div class="trophy-list">${
+      sorted.map(a => {
+        const got = Boolean(profile.achievements[a.id]); const v = Math.min(a.value(), a.target);
+        return `<article class="trophy-card${got ? ' got' : ''}"><div class="trophy-icon">${a.icon}</div><div class="trophy-main"><strong>${a.name}</strong><small>${a.desc}</small>${got ? '' : `<div class="mini-progress"><span style="width:${v / a.target * 100}%"></span></div>`}</div><div class="trophy-reward">${got ? '✓' : `◆ ${a.reward}`}</div></article>`;
+      }).join('')}</div>`;
+  }
+
+  /* =====================================================================
+     TUTORIEL (1re partie) — rejouable depuis les Paramètres
+     ===================================================================== */
+  const tutoGrid = rows => `<div class="tuto-grid" style="--tg:${rows[0].length}">${rows.map(row => [...row].map(ch => `<i class="tg-${ch === '.' ? 'e' : ch}"></i>`).join('')).join('')}</div>`;
+  const TUTORIAL = [
+    { title: 'Glisse les fragments', text: 'Prends un fragment en bas, fais-le glisser sur la grille et relâche pour le poser. Tu peux aussi le toucher, puis toucher la grille.', art: tutoGrid(['.....', '.aa..', '.a...', '.....', '...b.']) },
+    { title: 'Complète des lignes', text: 'Une ligne ou une colonne entièrement remplie se dissout et rapporte des points. Vise les cases en surbrillance : elles sont presque complètes !', art: tutoGrid(['.....', 'xxxx.', '.....', '.....', '.....']) },
+    { title: 'Enchaîne les combos', text: 'Dissous des lignes plusieurs coups de suite pour monter le combo et charger la Pulse. Vider tout le plateau offre +500 points.', art: tutoGrid(['aaaaa', 'bbbbb', 'aa.aa', 'bb.bb', 'aa.aa']) },
+    { title: 'Bonus et Shapes', text: 'Utilise tes bonus quand tu es bloqué. Dans le mode Shapes, le plateau change de géométrie : maîtrise-le pour débloquer la forme suivante.', art: tutoGrid(['..a..', '.aaa.', 'aaaaa', '.aaa.', '..a..']) }
+  ];
+  function openTutorial(page = 0) {
+    if (page >= TUTORIAL.length) { finishTutorial(); return; }
+    const step = TUTORIAL[page]; const last = page === TUTORIAL.length - 1;
+    state.paused = true;
+    openModal(`<span class="modal-kicker">COMMENT JOUER · ${page + 1}/${TUTORIAL.length}</span><div class="tuto-art" data-page="${page}">${step.art}</div><h2>${step.title}</h2><p>${step.text}</p><div class="tuto-dots">${TUTORIAL.map((_, i) => `<span class="${i === page ? 'on' : ''}"></span>`).join('')}</div><div class="modal-actions" data-page="${page}">${last ? '' : '<button class="secondary" data-action="tutorial-skip">PASSER</button>'}<button class="primary" data-action="${last ? 'tutorial-skip' : 'tutorial-next'}">${last ? 'C\u2019EST PARTI !' : 'SUIVANT →'}</button></div>`, 'tutorial-modal');
+    playSfx('button');
+  }
+  function finishTutorial() {
+    profile.tutorialDone = true; saveProfile(); closeModal(); playSfx('start');
+  }
+
+  /* =====================================================================
+     APPLICATION MOBILE : installation, hors-ligne, retour, veille, partage
+     ===================================================================== */
+  let deferredInstall = null;
+  let wakeLock = null;
+  const isStandalone = () => Boolean(window.matchMedia?.('(display-mode: standalone)').matches || (typeof navigator !== 'undefined' && navigator.standalone === true));
+  const isIos = () => typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+
+  function renderInstall() {
+    const row = $('#install-row'); if (!row) return;
+    row.classList.toggle('hidden', isStandalone());
+    const small = $('#install-hint'); if (small) small.textContent = deferredInstall ? 'Ajoute Pulse Grid à ton écran d\u2019accueil, plein écran et hors ligne.' : isIos() ? 'Sur iPhone : Partager puis « Sur l\u2019écran d\u2019accueil ».' : 'Utilise le menu du navigateur : « Installer l\u2019application ».';
+  }
+  function installApp() {
+    if (deferredInstall) {
+      deferredInstall.prompt();
+      Promise.resolve(deferredInstall.userChoice).finally(() => { deferredInstall = null; renderInstall(); });
+    } else openModal(`<span class="modal-kicker">INSTALLER L'APPLICATION</span><h2>Joue en plein écran</h2><p>${isIos() ? 'Touche le bouton <b>Partager</b> de Safari, puis <b>Sur l\u2019écran d\u2019accueil</b>.' : 'Ouvre le menu du navigateur (⋮) puis choisis <b>Installer l\u2019application</b> ou <b>Ajouter à l\u2019écran d\u2019accueil</b>.'}</p><div class="modal-actions"><button class="primary" data-action="close-modal">COMPRIS</button></div>`);
+  }
+
+  // Maintient l'écran allumé pendant une partie (API facultative).
+  async function keepAwake(on) {
+    try {
+      if (on && !wakeLock && navigator.wakeLock?.request) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener?.('release', () => { wakeLock = null; });
+      } else if (!on && wakeLock) { const lock = wakeLock; wakeLock = null; await lock.release(); }
+    } catch (_) { wakeLock = null; }
+  }
+
+  function shareScore() {
+    const mode = state.mode === 'shapes' ? `Shapes · ${shapeDef(geo.id).name}` : 'Classic';
+    const text = `J\u2019ai fait ${formatNumber(state.score)} points sur Pulse Grid (${mode}) ! Peux-tu faire mieux ?`;
+    const url = typeof location !== 'undefined' && /^https?:/.test(location.href) ? location.href.split('#')[0] : undefined;
+    if (navigator.share) { navigator.share({ title: 'Pulse Grid', text, url }).catch(() => {}); return; }
+    const full = url ? `${text} ${url}` : text;
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(full).then(() => showToast('Score copié, colle-le où tu veux !')).catch(() => showToast('Partage indisponible.'));
+    else showToast('Partage indisponible sur ce navigateur.');
+  }
+
+  function initNative() {
+    // Service worker : jeu utilisable sans connexion + mises à jour silencieuses.
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && typeof location !== 'undefined' && /^https?:/.test(location.protocol)) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const worker = reg.installing;
+            worker?.addEventListener('statechange', () => { if (worker.state === 'installed' && navigator.serviceWorker.controller) showToast('Mise à jour prête : elle s\u2019appliquera au prochain lancement.'); });
+          });
+        }).catch(() => {});
+      });
+    }
+    window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); deferredInstall = event; renderInstall(); });
+    window.addEventListener('appinstalled', () => { deferredInstall = null; renderInstall(); showToast('Pulse Grid est installé !'); playSfx('unlock'); });
+    // Comportements « appli » : pas de menu contextuel ni de zoom au pincement.
+    document.addEventListener('contextmenu', event => { if (!event.target.closest?.('input, textarea')) event.preventDefault(); });
+    document.addEventListener('gesturestart', event => event.preventDefault());
+    // Partie mise en pause automatiquement quand l'app passe en arrière-plan.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (state.gameActive && state.screen === 'game' && !$('#modal-backdrop')?.classList.contains('open')) openPauseModal();
+        saveProfile(); keepAwake(false);
+      } else if (state.gameActive && state.screen === 'game') keepAwake(true);
+    });
+    window.addEventListener('pagehide', () => saveProfile());
+    // Bouton retour Android / geste retour iOS : ferme, met en pause ou remonte — sans quitter l'app par erreur.
+    if (typeof history !== 'undefined' && history.pushState) {
+      history.pushState({ pg: 1 }, '');
+      window.addEventListener('popstate', () => {
+        let handled = true;
+        if ($('#modal-backdrop')?.classList.contains('open') && !state.packOpening) closeModal();
+        else if (state.screen === 'game' && state.gameActive) openPauseModal();
+        else if (state.screen !== 'home') showScreen('home');
+        else handled = false;
+        if (handled) history.pushState({ pg: 1 }, '');
+      });
+    }
+    renderInstall();
+  }
+
+  // Pour les tests automatisés uniquement (aucun effet en production).
+  if (typeof window !== 'undefined' && typeof window.__PULSE_EXPOSE__ === 'function') {
+    window.__PULSE_EXPOSE__({
+      ACHIEVEMENTS, checkAchievements, achValue, openTutorial, finishTutorial, shareScore,
+      importSave, doReset, saveText, renderSettings,
+      snapshotRun, validRun, resumeRun, dailyStatus, claimDaily, playSfx, startMusic, stopMusic,
+      get state() { return state; }, get profile() { return profile; }, get geo() { return geo; },
+      SHAPE_BOARDS, SHAPE_BY_ID, getGeometry, buildGeometry, canPlace, canAnyPlace, generatePiece, generateQueue, makePiece,
+      clearCompletedLines, placePiece, startNewGame, endGame, activateBoard, shapeMasteryPct, shapeObjectives, normalizeShapes,
+      isShapeUnlocked, trackShapesProgress, loadProfile, createEmptyBoard, calculateClearScore
     });
   }
 

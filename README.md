@@ -38,3 +38,59 @@ Problème de départ : les skins ne changeaient pas les pièces (couleurs fixée
 Compatibilité : les ids existants sont conservés, les sauvegardes restent valides. Nouveaux ids : `pixel` (skin), `sunset` (plateau). `index.html` : seul ajout, l'onglet « Thèmes ».
 
 Où retoucher : `CATALOG` / `SHOP_META` / `THEMES` (game.js, prix et raretés), blocs `/* 1. STYLES DE BLOCS */` et `/* 2. TEXTURES DE PLATEAU */` (style.css).
+
+
+---
+
+## Mode SHAPES (v3)
+
+Deux modes : **CLASSIC** (inchangé : 8×8, mêmes règles/score/pièces) et **SHAPES** (plateaux qui changent de géométrie : Carré → Rectangle → Triangle → Losange → Cercle).
+
+**Architecture** (game.js, bloc « SHAPES ») : un plateau = un objet de `SHAPE_BOARDS` (rows, cols, `cell(r,c)` = quelles cases existent, `lines` = ce qui remplace la « ligne complète » : rows / cols / diag / anti / custom avec `min`, `weight`, `special`, `pool` = pièces et poids, `starter`, `mastery`, `reward`). `buildGeometry()` en déduit masque, lignes et index case→lignes ; `geo` est la géométrie active (Classic = 8×8, 16 lignes). Les cases hors forme n'existent pas pour le moteur (`canPlace`, génération, indices, fin de partie). Le DOM garde une grille rectangulaire (cases `void` invisibles) : **le drag n'a pas été modifié**.
+
+**Ajouter une forme** : ajouter un objet dans `SHAPE_BOARDS` (+ éventuellement des pièces dans `EXTRA_SHAPES` / `PIECE_COLORS`). Écrans, déblocage et sauvegarde s'adaptent seuls.
+
+**Progression** : un plateau est maîtrisé (100 %) quand ses objectifs sont remplis : lignes cumulées, meilleur combo, score en une partie, + un objectif propre à la forme (lignes longues, diagonales, bords du losange, noyau/anneau). Maîtriser un plateau donne pièces + XP et débloque le suivant (transition animée).
+
+**Sauvegarde** : `profile.shapes` (séparé de `profile.best` / `profile.stats`). Anciennes sauvegardes : valeurs par défaut créées automatiquement. Les missions, XP, monnaie et inventaire restent communs.
+
+Fichiers modifiés : game.js, style.css, index.html (carte SHAPES, HUD, écran Shapes).
+
+
+---
+
+## v4 — thème clair, audio, nouveautés
+
+- **Thème clair** (défaut) : fonds éclaircis (bleu ardoise), plateau Nuit profonde éclairci, cartes et modales plus lumineuses. Bouton **FOND** (accueil) pour revenir à l'ancien thème sombre (`html[data-ui="dark"]`). Bloc « THÈME CLAIR » en fin de style.css.
+- **Audio refait** : enveloppes douces, timbres de cloche, réverbération générée, compresseur anti-saturation, panoramique stéréo, plafond de voix (36). Gammes pentatoniques (arpèges montants selon le nombre de lignes, combos qui montent). Nouveau son d'erreur pour une pose refusée. Les sons sont planifiés sur l'horloge audio (plus de setTimeout).
+- **Musique d'ambiance générative** (le bouton Musique est enfin actif) : nappes + notes pentatoniques, sans fichier audio. Coupée pendant un drag et quand l'onglet est caché. Le volume règle effets et musique.
+- **Reprendre la partie** : la partie en cours est sauvegardée à chaque coup (Classic ou Shapes) ; bouton « Reprendre » sur l'accueil.
+- **Bonus quotidien** : série de connexion (30 → 160 ◆ sur 7 jours).
+- **Plateau vide** : +500 points bonus quand le plateau est entièrement vidé.
+- **Réglage Vibration** ON/OFF.
+- Anciennes sauvegardes compatibles (ui, haptics, daily, run créés par défaut).
+
+
+---
+
+## v4.1 — Paramètres
+
+Nouvel écran **Paramètres** (roue ⚙ en haut de l'accueil) :
+- **Audio** : effets, musique, volume, bouton « Tester le son » (les réglages audio de l'accueil y ont été déplacés ; les icônes rapides du haut restent).
+- **Affichage** : fond clair/sombre, *réduire les animations* (`html[data-motion="reduced"]`), astuce en jeu on/off.
+- **Jeu** : vibrations.
+- **Sauvegarde & données** : exporter (fichier .json), copier dans le presse-papiers, importer (validation + valeurs par défaut pour les champs manquants ; une sauvegarde invalide ne change rien).
+- **Réinitialisation** avec confirmation : Classic seul, Shapes seul, ou tout.
+Nouveaux champs de sauvegarde : `reduceMotion`, `showTip` (défauts créés automatiquement).
+
+
+---
+
+## v5.0 — Vrai jeu mobile
+
+- **PWA installable** : `manifest.webmanifest`, `sw.js` (hors-ligne, mises à jour silencieuses), icônes (`icons/`), balises iOS/Android. Bouton « Installer l'application » dans les Paramètres. Voir `PUBLIER.md`.
+- **Comportements d'app** : pause automatique en arrière-plan, écran maintenu allumé en partie, bouton retour Android géré (ferme / pause / remonte sans quitter), pas de zoom ni de menu contextuel, zones sûres (encoche).
+- **Tutoriel** au premier lancement (4 écrans, rejouable depuis les Paramètres).
+- **23 trophées** avec récompenses en pièces automatiques, écran Trophées, compteur sur l'accueil.
+- **Partage du score** (feuille de partage native, sinon copie).
+- Anciennes sauvegardes compatibles : `tutorialDone`, `achievements`, `perfectClears` créés par défaut ; un joueur existant ne revoit pas le tutoriel.

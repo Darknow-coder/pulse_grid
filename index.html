@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#080b18" />
+  <meta name="theme-color" content="#2a3c63" />
+  <meta name="description" content="Pulse Grid : puzzle arcade de placement de blocs, modes Classic et Shapes, 100 % hors ligne." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Pulse Grid" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <title>Pulse Grid</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -26,6 +35,7 @@
             </div>
           </div>
           <div class="topbar-actions" aria-label="Réglages audio">
+            <button class="icon-button" data-route="settings" aria-label="Paramètres"><span>⚙</span></button>
             <button class="icon-button audio-toggle music-toggle" data-action="toggle-music" aria-label="Activer ou couper la musique"><span id="music-icon">♫</span></button>
             <button class="icon-button audio-toggle" data-action="toggle-sound" aria-label="Activer ou couper les effets sonores"><span id="sound-icon">◖</span></button>
           </div>
@@ -40,17 +50,11 @@
             </div>
             <div class="currency-pill"><span class="coin-icon">◆</span><strong id="home-coins">240</strong></div>
           </div>
-          <div class="audio-preferences" aria-label="Réglages audio">
-            <button class="audio-preference" data-action="toggle-sound"><span>EFFETS</span><strong id="sound-label">ON</strong></button>
-            <button class="audio-preference" data-action="toggle-music"><span>MUSIQUE</span><strong id="music-label">OFF</strong></button>
-            <label class="volume-preference"><span>VOLUME</span><input id="volume-control" type="range" min="0" max="100" step="1" value="72" aria-label="Volume des effets sonores" /><output id="volume-label">72%</output></label>
-          </div>
-
           <article class="hero-card">
             <div class="hero-orbit orbit-one"></div>
             <div class="hero-orbit orbit-two"></div>
             <div class="hero-copy">
-              <span class="eyebrow accent">MODE CLASSIQUE</span>
+              <span class="eyebrow accent">🟦 CLASSIC</span>
               <h2>Fais vibrer<br />la grille.</h2>
               <p>Assemble tes fragments, déclenche des impulsions et construis ton meilleur combo.</p>
               <div class="hero-record"><span>MEILLEUR SCORE</span><strong id="home-best">0</strong></div>
@@ -63,12 +67,42 @@
             </div>
           </article>
 
+          <article id="resume-card" class="resume-card hidden">
+            <div class="resume-icon">▶</div>
+            <div class="resume-copy"><span class="eyebrow accent">PARTIE EN COURS</span><strong id="resume-card-text">CLASSIC</strong></div>
+            <button class="primary-button resume-button" data-action="resume-run"><span>REPRENDRE</span><b>→</b></button>
+          </article>
+
+          <article id="shapes-card" class="shapes-card">
+            <div id="shapes-card-visual" class="shapes-card-visual" aria-hidden="true"></div>
+            <div class="shapes-card-copy">
+              <span class="eyebrow accent">🌐 SHAPES</span>
+              <h2>Change de géométrie.</h2>
+              <p id="shapes-card-text">0 / 5 plateaux maîtrisés</p>
+              <div class="shapes-card-progress">
+                <div class="row-between"><span id="shapes-card-board">■ CARRÉ</span><b id="shapes-card-pct">0 %</b></div>
+                <div class="mini-progress"><span id="shapes-card-fill"></span></div>
+              </div>
+              <div class="shapes-card-actions">
+                <button class="primary-button shapes-play" data-action="play-shapes"><span>JOUER</span><b>→</b></button>
+                <button class="ghost-button" data-route="shapes">PLATEAUX</button>
+              </div>
+            </div>
+          </article>
+
+          <article id="daily-bonus" class="daily-bonus">
+            <div class="daily-bonus-icon">🎁</div>
+            <div class="daily-bonus-copy"><span class="eyebrow accent">BONUS QUOTIDIEN</span><strong id="daily-bonus-title">Jour 1</strong><small id="daily-bonus-text"></small></div>
+            <button id="daily-bonus-button" class="daily-bonus-button" data-action="claim-daily">RÉCUPÉRER</button>
+          </article>
+
           <div class="section-heading"><h2>Ton espace</h2><span class="section-line"></span></div>
           <div class="quick-grid">
             <button class="quick-card shop-card" data-route="shop"><span class="quick-icon">◆</span><span>Boutique</span><small>Skins & effets</small></button>
             <button class="quick-card missions-card" data-route="missions"><span class="quick-icon">✓</span><span>Missions</span><small id="home-mission-count">0 à réclamer</small></button>
             <button class="quick-card style-card" data-route="collection"><span class="quick-icon">◈</span><span>Atelier</span><small>Personnalise ton jeu</small></button>
             <button class="quick-card stats-card" data-route="stats"><span class="quick-icon">↗</span><span>Stats</span><small>Ta progression</small></button>
+            <button class="quick-card trophies-card" data-route="trophies"><span class="quick-icon">🏆</span><span>Trophées</span><small id="home-trophy-count">0 / 23</small></button>
             <button class="quick-card progression-card" data-route="progression"><span class="quick-icon">★</span><span>Progression</span><small id="home-progression-next">Route des récompenses</small></button>
           </div>
 
@@ -90,6 +124,12 @@
         <div class="game-content">
           <div class="combo-row"><span id="game-message">Choisis un fragment et fais-le glisser.</span><span id="combo-badge" class="combo-badge hidden">COMBO ×<b>0</b></span></div>
           <div class="charge-row" aria-label="Charge Pulse"><div class="charge-copy"><b>CHARGE PULSE</b><small id="charge-message">Dissous des lignes pour charger une rafale.</small></div><div class="charge-track"><span id="charge-fill"></span></div><strong id="charge-value">0%</strong></div>
+          <div id="shape-hud" class="shape-hud hidden" aria-label="Maîtrise du plateau">
+            <span id="shape-hud-icon" class="shape-hud-icon">■</span>
+            <b id="shape-hud-name">CARRÉ</b>
+            <div class="shape-hud-track"><span id="shape-hud-fill"></span></div>
+            <strong id="shape-hud-pct">0%</strong>
+          </div>
           <div id="board-wrap" class="board-wrap">
             <div id="board" class="board" role="grid" aria-label="Grille de jeu"></div>
             <div id="fx-layer" class="fx-layer" aria-hidden="true"></div>
@@ -111,6 +151,68 @@
           <div id="piece-tray" class="piece-tray" aria-label="Fragments disponibles"></div>
           <div class="game-tip"><span class="tip-dot"></span><span>Astuce : tu peux aussi toucher un fragment, puis toucher la grille.</span></div>
         </div>
+      </section>
+
+      <section id="screen-settings" class="screen" aria-labelledby="settings-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home" aria-label="Retour">‹</button><div><div class="eyebrow">PERSONNALISE TON EXPÉRIENCE</div><h1 id="settings-title">Paramètres</h1></div><div class="header-symbol">⚙</div></header>
+        <div class="page-content subpage-content settings-page">
+
+          <section class="settings-group" aria-label="Audio">
+            <h2 class="settings-title">Audio</h2>
+            <button class="setting-row" data-action="toggle-sound"><span class="setting-copy"><b>Effets sonores</b><small>Poses, lignes, combos, récompenses</small></span><strong id="sound-label">ON</strong><span class="switch"></span></button>
+            <button class="setting-row" data-action="toggle-music"><span class="setting-copy"><b>Musique d'ambiance</b><small>Nappes calmes générées en direct</small></span><strong id="music-label">OFF</strong><span class="switch"></span></button>
+            <div class="setting-row setting-slider"><span class="setting-copy"><b>Volume</b><small>Effets et musique</small></span><input id="volume-control" type="range" min="0" max="100" step="1" value="72" aria-label="Volume" /><output id="volume-label">72%</output></div>
+            <button class="setting-row setting-action" data-action="test-sound"><span class="setting-copy"><b>Tester le son</b><small>Joue un petit jingle pour régler le volume</small></span><span class="setting-go">▶</span></button>
+          </section>
+
+          <section class="settings-group" aria-label="Affichage">
+            <h2 class="settings-title">Affichage</h2>
+            <button class="setting-row" data-action="toggle-theme"><span class="setting-copy"><b>Fond clair</b><small>Désactivé : thème sombre d'origine</small></span><strong id="theme-label">CLAIR</strong><span class="switch"></span></button>
+            <button class="setting-row" data-action="toggle-motion"><span class="setting-copy"><b>Réduire les animations</b><small>Moins de mouvement, utile sur un téléphone lent</small></span><strong id="motion-label">OFF</strong><span class="switch"></span></button>
+            <button class="setting-row" data-action="toggle-tip"><span class="setting-copy"><b>Astuce en jeu</b><small>Rappel sous les fragments</small></span><strong id="tip-label">ON</strong><span class="switch"></span></button>
+          </section>
+
+          <section class="settings-group" aria-label="Jeu">
+            <h2 class="settings-title">Jeu</h2>
+            <button class="setting-row" data-action="toggle-haptics"><span class="setting-copy"><b>Vibrations</b><small>Retour haptique à chaque action</small></span><strong id="haptics-label">ON</strong><span class="switch"></span></button>
+          </section>
+
+          <section class="settings-group" aria-label="Application">
+            <h2 class="settings-title">Application</h2>
+            <button id="install-row" class="setting-row setting-action" data-action="install-app"><span class="setting-copy"><b>Installer l'application</b><small id="install-hint">Plein écran et hors ligne</small></span><span class="setting-go">⬇</span></button>
+            <button class="setting-row setting-action" data-action="open-tutorial"><span class="setting-copy"><b>Comment jouer</b><small>Revoir le tutoriel</small></span><span class="setting-go">?</span></button>
+          </section>
+
+          <section class="settings-group" aria-label="Données">
+            <h2 class="settings-title">Sauvegarde &amp; données</h2>
+            <p class="settings-note">Ta progression est enregistrée sur cet appareil. Exporte-la pour la garder en sécurité ou la transférer sur un autre téléphone.</p>
+            <div class="settings-buttons">
+              <button class="ghost-button" data-action="export-save">EXPORTER</button>
+              <button class="ghost-button" data-action="copy-save">COPIER</button>
+              <button class="ghost-button" data-action="import-save">IMPORTER</button>
+            </div>
+            <input id="import-file" type="file" accept="application/json,.json" hidden />
+          </section>
+
+          <section class="settings-group danger" aria-label="Réinitialisation">
+            <h2 class="settings-title">Réinitialisation</h2>
+            <button class="setting-row setting-action" data-action="reset-classic"><span class="setting-copy"><b>Remettre Classic à zéro</b><small>Meilleur score et statistiques Classic</small></span><span class="setting-go">↺</span></button>
+            <button class="setting-row setting-action" data-action="reset-shapes"><span class="setting-copy"><b>Remettre Shapes à zéro</b><small>Plateaux maîtrisés et progression Shapes</small></span><span class="setting-go">↺</span></button>
+            <button class="setting-row setting-action" data-action="reset-all"><span class="setting-copy"><b>Tout effacer</b><small>Niveau, pièces, objets, missions, tout</small></span><span class="setting-go">⚠</span></button>
+          </section>
+
+          <p class="settings-about"><b>PULSE GRID</b> · version <span id="settings-version">4.0</span><br /><span id="settings-summary"></span></p>
+        </div>
+      </section>
+
+      <section id="screen-trophies" class="screen" aria-labelledby="trophies-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home" aria-label="Retour">‹</button><div><div class="eyebrow">TES EXPLOITS</div><h1 id="trophies-title">Trophées</h1></div><div class="header-symbol">🏆</div></header>
+        <div class="page-content subpage-content"><div id="trophies-content"></div></div>
+      </section>
+
+      <section id="screen-shapes" class="screen" aria-labelledby="shapes-title">
+        <header class="subpage-topbar"><button class="icon-button" data-route="home">‹</button><div><div class="eyebrow">AVENTURE GÉOMÉTRIQUE</div><h1 id="shapes-title">Shapes</h1></div><div class="header-symbol">◇</div></header>
+        <div class="page-content subpage-content"><div id="shapes-content"></div></div>
       </section>
 
       <section id="screen-shop" class="screen" aria-labelledby="shop-title">
