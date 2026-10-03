@@ -16,6 +16,14 @@
     else clearTimeout(frame);
   };
 
+  // Réglages du drag (à tester sur téléphone) :
+  // - false : on écoute pointermove (aligné sur les frames, moins de travail pour le téléphone)
+  // - true  : on écoute pointerrawupdate (plus d'événements, peut saturer un téléphone modeste)
+  const DRAG_USE_RAW_UPDATES = false;
+  // - true  : la pièce est dessinée légèrement en avance sur la trajectoire du doigt
+  //   (compense la latence de l'écran tactile) ; false : position exacte du doigt.
+  const DRAG_USE_PREDICTION = false;
+
   const SHAPE_LIBRARY = [
     { id: 'dot', cells: [[0, 0]] },
     { id: 'domino-h', cells: [[0, 0], [0, 1]] },
@@ -343,7 +351,12 @@
   function bindEvents() {
     document.addEventListener('click', handleClick);
     document.addEventListener('pointerdown', handlePointerDown, { passive: false });
-    const moveEvent = typeof window !== 'undefined' && 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove';
+    const moveEvent = DRAG_USE_RAW_UPDATES && typeof window !== 'undefined' && 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove';
+    // Réveille l'audio dès la première interaction (et non au moment de prendre
+    // une pièce) : créer l'AudioContext à ce moment-là provoque un à-coup.
+    const warmAudio = () => { if (profile.sound) getAudioContext(); };
+    document.addEventListener('pointerup', warmAudio, { once: true, passive: true });
+    document.addEventListener('click', warmAudio, { once: true, passive: true });
     document.addEventListener(moveEvent, handlePointerMove, { passive: false });
     document.addEventListener('pointerup', handlePointerUp, { passive: false });
     document.addEventListener('pointercancel', cancelDrag, { passive: false });
@@ -429,6 +442,10 @@
     }
   }
 
+  function setDragMode(active) {
+    document.documentElement.classList.toggle('is-dragging', active);
+  }
+
   function removeDragGhost(ghost) {
     if (!ghost) return;
     ghost.style.willChange = 'auto';
@@ -441,6 +458,7 @@
     state.drag.sourceItem?.releasePointerCapture?.(state.drag.pointerId);
     removeDragGhost(state.drag.ghost);
     state.drag = null;
+    setDragMode(false);
     state.suppressPieceClick = false;
     clearPreview();
   }
@@ -507,7 +525,6 @@
     state.selectedPiece = index;
     $$('.piece-item.selected').forEach(pieceItem => pieceItem.classList.remove('selected'));
     item.classList.add('selected');
-    vibrate(9);
     clearPreview();
     $('#game-message').textContent = 'Touche la grille pour déposer ce fragment.';
 
@@ -532,12 +549,16 @@
       previewFrame: null
     };
     item.setPointerCapture?.(event.pointerId);
+    setDragMode(true);
     document.body.appendChild(ghost);
     updateGhost(event.clientX, event.clientY);
-    const playSelectSound = () => {
-      if (state.drag?.pointerId === event.pointerId) playSfx('select');
-    };
-    scheduleFrame(playSelectSound);
+    // Vibration et son sont reportés après l'affichage de la première frame du
+    // drag, pour qu'ils ne retardent jamais l'apparition de la pièce.
+    scheduleFrame(() => setTimeout(() => {
+      if (state.drag?.pointerId !== event.pointerId) return;
+      vibrate(9);
+      playSfx('select');
+    }, 0));
   }
 
   function handlePointerMove(event) {
@@ -553,7 +574,14 @@
     } catch (_) { /* API facultative */ }
 
     // Priorité absolue : le ghost bouge dans le même événement que le doigt.
-    updateGhost(latestEvent.clientX, latestEvent.clientY, drag);
+    let visualEvent = latestEvent;
+    if (DRAG_USE_PREDICTION) {
+      try {
+        const predicted = event.getPredictedEvents?.();
+        if (predicted?.length) visualEvent = predicted[0];
+      } catch (_) { /* API facultative */ }
+    }
+    updateGhost(visualEvent.clientX, visualEvent.clientY, drag);
     drag.pendingX = latestEvent.clientX;
     drag.pendingY = latestEvent.clientY;
     event.preventDefault();
@@ -595,11 +623,27 @@
     removeDragGhost(drag.ghost);
     state.drag = null;
     clearPreview();
+    setDragMode(false);
     if (placement?.valid) placePiece(drag.index, placement.row, placement.col);
     else renderTray();
   }
 
+  // Le dessin du fantôme (dégradés + ombres) est coûteux sur un téléphone
+  // modeste : on garde en mémoire les canvas déjà dessinés pour les réutiliser.
+  const ghostCanvasCache = new Map();
+
   function createDragGhostCanvas(piece, cellWidth, cellHeight, gapX, gapY) {
+    const pieceColor = piece.color || getPieceColor(piece.id);
+    const cacheKey = [piece.id, pieceColor.primary, pieceColor.secondary, cellWidth.toFixed(2), cellHeight.toFixed(2), gapX.toFixed(2), gapY.toFixed(2), window.devicePixelRatio || 1].join('|');
+    const cached = ghostCanvasCache.get(cacheKey);
+    if (cached) { cached.style.willChange = 'transform'; return cached; }
+    const canvas = buildDragGhostCanvas(piece, cellWidth, cellHeight, gapX, gapY);
+    if (ghostCanvasCache.size > 40) ghostCanvasCache.clear();
+    ghostCanvasCache.set(cacheKey, canvas);
+    return canvas;
+  }
+
+  function buildDragGhostCanvas(piece, cellWidth, cellHeight, gapX, gapY) {
     const canvas = document.createElement('canvas');
     canvas.className = 'drag-ghost';
     const cssWidth = piece.cols * cellWidth + Math.max(0, piece.cols - 1) * gapX;
@@ -611,7 +655,7 @@
     canvas.width = Math.max(1, Math.round(cssWidth * dpr));
     canvas.height = Math.max(1, Math.round(cssHeight * dpr));
 
-    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return canvas;
     ctx.scale(dpr, dpr);
     const color = piece.color || getPieceColor(piece.id);
