@@ -59,7 +59,7 @@
     'line-4-h': { primary: '#75e9ff', secondary: '#4c8dff', soft: 'rgba(110,184,255,.28)' },
     'line-4-v': { primary: '#ffe28a', secondary: '#ff856e', soft: 'rgba(255,209,122,.3)' }
   };
-  const getPieceColor = id => PIECE_COLORS[id] || PIECE_COLORS.dot;
+  const getPieceColor = id => skinColorForShape(CATALOG.skins.find(item => item.id === profile.equipped.skin), id);
   const STARTER_WAVES = [
     ['domino-h', 'square', 'tri-h'],
     ['domino-v', 'l-small', 'line-4-h']
@@ -67,33 +67,50 @@
 
   const CATALOG = {
     skins: [
-      { id: 'aurora', name: 'Aurora', price: 0, description: 'Le calme électrique des premières parties.', primary: '#65e8d0', secondary: '#8b7cff', soft: 'rgba(101,232,208,.18)', contrast: '#07141b' },
-      { id: 'ember', name: 'Ember', price: 180, description: 'Une chaleur vive pour jouer sans trembler.', primary: '#ff9b70', secondary: '#ff4f92', soft: 'rgba(255,126,112,.18)', contrast: '#261016' },
-      { id: 'cobalt', name: 'Cobalt', price: 260, description: 'Froid, net, précis. Chaque coup compte.', primary: '#6eb8ff', secondary: '#6673ff', soft: 'rgba(110,184,255,.18)', contrast: '#081426' },
-      { id: 'lime', name: 'Lime Shift', price: 340, description: 'Une énergie acide qui attire les combos.', primary: '#c4f36d', secondary: '#53d99d', soft: 'rgba(196,243,109,.18)', contrast: '#12210f' },
-      { id: 'violet', name: 'Ultraviolet', price: 460, description: 'Le mode nuit des architectes de grille.', primary: '#e09aff', secondary: '#766cff', soft: 'rgba(224,154,255,.18)', contrast: '#1a0c24' }
+      { id: 'aurora', name: 'Aurora', price: 0, description: 'Le bloc de référence : brillant, net, lumineux.', primary: '#65e8d0', secondary: '#8b7cff', soft: 'rgba(101,232,208,.18)', contrast: '#07141b' },
+      { id: 'ember', name: 'Ember', price: 180, description: 'Des blocs de lave : cœur sombre, braise qui couve dessous.', primary: '#ff9b70', secondary: '#ff4f92', soft: 'rgba(255,126,112,.18)', contrast: '#261016',
+        palette: [['#ffd36e', '#ff7a1a'], ['#ff9a52', '#e8321e'], ['#ffb347', '#d6281f'], ['#ff6b4a', '#b3122d'], ['#ffe08a', '#ff8a3d'], ['#ff5a36', '#8f0f2a']] },
+      { id: 'pixel', name: 'Pixel Arcade', price: 240, description: 'Relief 8 bits et couleurs pleines, comme sur une vraie borne.', primary: '#4dff88', secondary: '#4da6ff', soft: 'rgba(77,255,136,.18)', contrast: '#04140a',
+        palette: [['#ff5d5d', '#b30000'], ['#4dff88', '#00a844'], ['#4da6ff', '#0050c8'], ['#ffe14d', '#c89a00'], ['#ff5dff', '#a000a0'], ['#ff9a3d', '#c24b00']] },
+      { id: 'cobalt', name: 'Cobalt', price: 260, description: 'Des blocs de verre glacé, taillés pour refléter la lumière.', primary: '#6eb8ff', secondary: '#6673ff', soft: 'rgba(110,184,255,.18)', contrast: '#081426',
+        palette: [['#d9f4ff', '#5bb8ff'], ['#a8e3ff', '#3a7bff'], ['#c7e9ff', '#6a8dff'], ['#8fd2ff', '#2e5fe0'], ['#e6f7ff', '#7ec8ff'], ['#b4c0ff', '#4a58e8']] },
+      { id: 'lime', name: 'Lime Shift', price: 340, description: 'Des bonbons gélifiés rebondis, avec leurs reflets mouillés.', primary: '#c4f36d', secondary: '#53d99d', soft: 'rgba(196,243,109,.18)', contrast: '#12210f',
+        palette: [['#d7ff6e', '#3fd97a'], ['#ffe75e', '#ffa81f'], ['#ff8fc4', '#ff4e9a'], ['#7ee8ff', '#2fb4ff'], ['#c9a6ff', '#8a5bff'], ['#ffb07a', '#ff6a4f']] },
+      { id: 'violet', name: 'Ultraviolet', price: 460, description: 'Des tubes néon : contour électrique, cœur incandescent.', primary: '#e09aff', secondary: '#766cff', soft: 'rgba(224,154,255,.18)', contrast: '#1a0c24',
+        palette: [['#f0a5ff', '#b34dff'], ['#8fa6ff', '#5a4dff'], ['#ff8ad8', '#ff3fa9'], ['#76f0ff', '#2fa5ff'], ['#c4a0ff', '#7b4dff'], ['#ff9bd0', '#d13fff']] },
+      { id: 'prism', name: 'Prism Shift', price: 520, description: 'Des gemmes taillées en facettes qui captent chaque reflet.', primary: '#f5a8ff', secondary: '#65e8ff', soft: 'rgba(186,151,255,.2)', contrast: '#160d28',
+        palette: [['#ff9bd2', '#b06cff'], ['#7ff3ff', '#4a8bff'], ['#9bffb3', '#2fd6a5'], ['#fff08a', '#ffb03f'], ['#ffa8a8', '#ff4f7a'], ['#c3a8ff', '#6a6bff']] },
+      { id: 'solaris', name: 'Solaris', price: 620, description: 'De l’or massif brossé, serti de rivets polis.', primary: '#ffe28a', secondary: '#ff6e89', soft: 'rgba(255,186,116,.2)', contrast: '#29130f',
+        palette: [['#fff0a0', '#e0a020'], ['#ffe27a', '#c98512'], ['#ffd2b0', '#d6703a'], ['#f4f6ff', '#a9b4d6'], ['#ffc85a', '#d4691f'], ['#ffc1b0', '#d0788a']] }
     ],
     boards: [
       { id: 'night', name: 'Nuit profonde', price: 0, description: 'Le plateau original de Pulse Grid.', shell: '#182846', cell: '#263b5d', glow: 'rgba(101,232,208,.2)', preview: '#203452' },
-      { id: 'glass', name: 'Verre fumé', price: 220, description: 'Une surface claire et réfléchissante.', shell: '#20384c', cell: '#31536a', glow: 'rgba(120,217,255,.24)', preview: '#2d4b60' },
-      { id: 'carbon', name: 'Carbone', price: 300, description: 'Contraste mat, sensation arcade.', shell: '#22252d', cell: '#343a43', glow: 'rgba(255,155,112,.2)', preview: '#30343b' },
-      { id: 'nebula', name: 'Nébuleuse', price: 400, description: 'Le vide spatial pour les longues séries.', shell: '#2a2550', cell: '#3b326b', glow: 'rgba(224,154,255,.24)', preview: '#3a3263' }
+      { id: 'glass', name: 'Verre fumé', price: 220, description: 'Une vitre givrée aux reflets de lumière.', shell: '#20384c', cell: '#31536a', glow: 'rgba(120,217,255,.28)', preview: '#2d4b60' },
+      { id: 'carbon', name: 'Carbone', price: 300, description: 'Fibre tressée, mate et dense. Sensation arcade.', shell: '#1c1f26', cell: '#2f343d', glow: 'rgba(255,155,112,.26)', preview: '#30343b' },
+      { id: 'sunset', name: 'Synthwave', price: 380, description: 'Un coucher de soleil rétro-futuriste sous la grille.', shell: '#3a1170', cell: 'rgba(26,8,56,.66)', glow: 'rgba(255,92,160,.34)', preview: '#4a1685' },
+      { id: 'nebula', name: 'Nébuleuse', price: 400, description: 'Un ciel d’étoiles et de gaz cosmiques derrière chaque case.', shell: '#2a2550', cell: 'rgba(40,30,92,.62)', glow: 'rgba(224,154,255,.3)', preview: '#3a3263' },
+      { id: 'gridline', name: 'Gridline', price: 520, description: 'Une grille de néon turquoise, tracée au laser.', shell: '#071e26', cell: 'rgba(8,38,46,.92)', glow: 'rgba(101,232,208,.36)', preview: '#164149' },
+      { id: 'void', name: 'Void', price: 600, description: 'Un vortex violet qui aspire la lumière de la grille.', shell: '#100a20', cell: 'rgba(20,11,40,.88)', glow: 'rgba(190,110,255,.4)', preview: '#26183e' }
     ],
     effects: [
       { id: 'burst', name: 'Burst', price: 0, description: 'Éclats géométriques à chaque ligne.', icon: '✦' },
-      { id: 'ring', name: 'Anneaux', price: 200, description: 'Une onde lumineuse parcourt le plateau.', icon: '◎' },
-      { id: 'confetti', name: 'Confettis', price: 320, description: 'Une pluie colorée pour les grands coups.', icon: '·✦·' },
-      { id: 'spark', name: 'Étincelles', price: 430, description: 'Des étincelles rapides et nerveuses.', icon: '⁕' }
+      { id: 'ring', name: 'Anneaux', price: 200, description: 'Des ondes de choc concentriques traversent le plateau.', icon: '◎' },
+      { id: 'confetti', name: 'Confettis', price: 320, description: 'Une explosion de confettis pour fêter chaque grand coup.', icon: '·✦·' },
+      { id: 'spark', name: 'Étincelles', price: 430, description: 'Des traînées dorées qui fusent comme un feu d’artifice.', icon: '⁕' },
+      { id: 'nova', name: 'Nova', price: 550, description: 'Un éclair blanc, une onde de choc : la ligne devient supernova.', icon: '✺' },
+      { id: 'magnet', name: 'Magnétisme', price: 600, description: 'Les débris sont aspirés en spirale vers un cœur lumineux.', icon: '◉' }
     ],
     boosters: [
-      { id: 'hammer', name: 'Marteau', price: 65, description: 'Retire un carré occupé pour ouvrir une nouvelle voie.', icon: '⌁' },
-      { id: 'reroll', name: 'Recomposition', price: 85, description: 'Remplace les fragments encore disponibles.', icon: '⟳' },
-      { id: 'pulse-core', name: 'Noyau Pulse', price: 120, description: 'Charge instantanément la prochaine Pulse Burst.', icon: '⚡' }
+      { id: 'hammer', name: 'Éclateur', price: 75, description: 'Retire un carré précis sans casser ton rythme.', icon: '⌁', tag: 'PRÉCISION', howTo: 'Active puis touche un carré occupé.' },
+      { id: 'reroll', name: 'Recomposition', price: 95, description: 'Change les fragments disponibles quand la main ne répond plus.', icon: '⟳', tag: 'OPTIONS', howTo: 'Remplace les fragments encore libres.' },
+      { id: 'pulse-core', name: 'Surcharge Pulse', price: 135, description: 'Remplit la charge pour préparer une Pulse Burst immédiate.', icon: '⚡', tag: 'COMBO', howTo: 'La prochaine ligne déclenche la Burst.' },
+      { id: 'scanner', name: 'Scanner Tactique', price: 60, description: 'Révèle une position forte sans jouer à ta place.', icon: '⌕', tag: 'INTEL', howTo: 'Active pour afficher le meilleur fragment.' },
+      { id: 'line-breaker', name: 'Lame de Ligne', price: 145, description: 'Ouvre une ligne horizontale au point faible de ta grille.', icon: '╾', tag: 'SECOURS', howTo: 'Active puis touche une case de la ligne.' }
     ],
     packs: [
-      { id: 'starter', name: 'Pack de départ', price: 210, description: 'Un petit stock pour tes premières parties.', icon: '▣', contents: { hammer: 2, reroll: 1, 'pulse-core': 1 } },
-      { id: 'combo', name: 'Pack Combo', price: 390, description: 'Le kit idéal pour viser un nouveau record.', icon: '✦', contents: { hammer: 3, reroll: 2, 'pulse-core': 2 } },
-      { id: 'overdrive', name: 'Pack Overdrive', price: 680, description: 'Une réserve complète pour les longues sessions.', icon: '◆', contents: { hammer: 5, reroll: 3, 'pulse-core': 4 } }
+      { id: 'starter', name: 'Kit Ouverture', price: 220, description: 'Les outils essentiels pour sortir d’une grille serrée.', icon: '▣', badge: 'DÉPART', savings: '−10%', contents: { hammer: 1, scanner: 2, reroll: 1 } },
+      { id: 'combo', name: 'Kit Combo', price: 440, description: 'Un stock équilibré pour préparer et prolonger les séries.', icon: '✦', badge: 'POPULAIRE', savings: '−15%', contents: { hammer: 2, scanner: 1, 'pulse-core': 2, 'line-breaker': 1 } },
+      { id: 'overdrive', name: 'Kit Overdrive', price: 760, description: 'La réserve complète pour les runs où chaque espace compte.', icon: '◆', badge: 'VALEUR MAX', savings: '−20%', contents: { hammer: 3, reroll: 2, scanner: 2, 'pulse-core': 3, 'line-breaker': 2 } }
     ]
   };
 
@@ -138,7 +155,7 @@
     level: 1,
     unlocked: { skins: ['aurora'], boards: ['night'], effects: ['burst'] },
     equipped: { skin: 'aurora', board: 'night', effect: 'burst' },
-    inventory: { hammer: 2, reroll: 1, 'pulse-core': 0 },
+    inventory: { hammer: 2, reroll: 1, 'pulse-core': 0, scanner: 0, 'line-breaker': 0 },
     stats: { ...DEFAULT_STATS },
     sound: true,
     music: false,
@@ -170,13 +187,16 @@
     resolving: false,
     gameActive: false,
     paused: false,
-    shopTab: 'skins',
+    shopTab: 'themes',
+    preview: null,
     toastTimer: null,
     clearFeedbackTimer: null,
     highScoreTimer: null,
     clearVisualPending: false,
     clearVisualToken: 0,
     boardMetricsCache: null,
+    packOpening: false,
+    packOpeningTimer: null,
     suppressPieceClick: false
   };
 
@@ -333,6 +353,7 @@
     document.documentElement.style.setProperty('--cell-bg', board.cell);
     document.documentElement.style.setProperty('--board-glow', board.glow);
     document.body.dataset.effect = profile.equipped.effect;
+    ['#board-wrap', '#piece-tray'].forEach(selector => { const el = $(selector); if (el) { el.dataset.skin = skin.id; el.dataset.board = board.id; } });
   }
 
   function init() {
@@ -366,7 +387,7 @@
     window.addEventListener('orientationchange', invalidateBoardMetrics, { passive: true });
     window.addEventListener('scroll', invalidateBoardMetrics, { passive: true, capture: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden) cancelDrag(); });
-    $('#modal-backdrop').addEventListener('click', event => { if (event.target.id === 'modal-backdrop') closeModal(); });
+    $('#modal-backdrop').addEventListener('click', event => { if (event.target.id === 'modal-backdrop' && !state.packOpening) closeModal(); });
     $('#volume-control')?.addEventListener('input', event => {
       profile.volume = clamp(Number(event.target.value) / 100, 0, 1);
       saveProfile();
@@ -436,6 +457,11 @@
       case 'buy-item': buyItem(event.target.closest('[data-item]')?.dataset.category, event.target.closest('[data-item]')?.dataset.item); break;
       case 'buy-booster': buyBooster(event.target.closest('[data-booster-id]')?.dataset.boosterId); break;
       case 'buy-pack': buyPack(event.target.closest('[data-pack-id]')?.dataset.packId); break;
+      case 'preview-item': { const card = event.target.closest('[data-item]'); playSfx('button'); vibrate(8); openCosmeticPreview('item', card?.dataset.category, card?.dataset.item); break; }
+      case 'preview-theme': { const card = event.target.closest('[data-theme]'); playSfx('button'); vibrate(8); openCosmeticPreview('theme', null, card?.dataset.theme); break; }
+      case 'buy-theme': buyTheme(event.target.closest('[data-theme]')?.dataset.theme); break;
+      case 'equip-theme': equipTheme(event.target.closest('[data-theme]')?.dataset.theme); break;
+      case 'finish-pack-opening': finishPackOpening(); break;
       case 'equip-item': equipItem(event.target.closest('[data-item]')?.dataset.category, event.target.closest('[data-item]')?.dataset.item); break;
       case 'shop-tab': state.shopTab = event.target.closest('[data-shop-tab]').dataset.shopTab; renderShop(); break;
       default: break;
@@ -633,7 +659,7 @@
   const ghostCanvasCache = new Map();
 
   function createDragGhostCanvas(piece, cellWidth, cellHeight, gapX, gapY) {
-    const pieceColor = piece.color || getPieceColor(piece.id);
+    const pieceColor = getPieceColor(piece.id);
     const cacheKey = [piece.id, pieceColor.primary, pieceColor.secondary, cellWidth.toFixed(2), cellHeight.toFixed(2), gapX.toFixed(2), gapY.toFixed(2), window.devicePixelRatio || 1].join('|');
     const cached = ghostCanvasCache.get(cacheKey);
     if (cached) { cached.style.willChange = 'transform'; return cached; }
@@ -658,7 +684,7 @@
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return canvas;
     ctx.scale(dpr, dpr);
-    const color = piece.color || getPieceColor(piece.id);
+    const color = getPieceColor(piece.id);
     const radius = Math.min(10, Math.max(6, cellWidth * 0.28));
 
     for (const [r, c] of piece.cells) {
@@ -829,7 +855,7 @@
 
   function createPieceVisual(piece, ghost = false) {
     const shape = document.createElement('div');
-    const color = piece.color || getPieceColor(piece.id);
+    const color = getPieceColor(piece.id);
     shape.className = 'piece-shape' + (ghost ? ' ghost-shape' : '');
     shape.style.setProperty('--piece-cols', piece.cols);
     shape.style.setProperty('--piece-rows', piece.rows);
@@ -866,7 +892,7 @@
       cell.className = `cell${occupied ? ' filled' : ''}${almostFull ? ' near-line' : ''}`;
       cell.removeAttribute('style');
       if (occupied) {
-        const color = boardPiece.color || getPieceColor(boardPiece.piece);
+        const color = getPieceColor(boardPiece.piece);
         cell.style.setProperty('--piece-primary', color.primary);
         cell.style.setProperty('--piece-secondary', color.secondary);
         cell.style.setProperty('--piece-soft', color.soft);
@@ -908,9 +934,11 @@
   }
 
   const BOOSTER_DEFS = [
-    { id: 'hammer', label: 'Marteau', short: 'Retirer 1 carré', icon: '⌁' },
-    { id: 'reroll', label: 'Recomp.', short: 'Changer les pièces', icon: '⟳' },
-    { id: 'pulse-core', label: 'Noyau', short: 'Charger Pulse', icon: '⚡' }
+    { id: 'hammer', label: 'Éclateur', short: 'Retirer 1 carré', active: 'Touche un carré', icon: '⌁' },
+    { id: 'reroll', label: 'Recomp.', short: 'Changer la main', active: 'En cours…', icon: '⟳' },
+    { id: 'pulse-core', label: 'Surcharge', short: 'Charger Pulse', active: 'Prêt au prochain clear', icon: '⚡' },
+    { id: 'scanner', label: 'Scanner', short: 'Révéler un coup', active: 'Analyse…', icon: '⌕' },
+    { id: 'line-breaker', label: 'Lame', short: 'Ouvrir une ligne', active: 'Touche une ligne', icon: '╾' }
   ];
 
   function renderBoosters() {
@@ -920,7 +948,7 @@
       const count = profile.inventory[def.id] || 0;
       const active = state.activeBooster === def.id;
       const disabled = count <= 0 || state.resolving || !state.gameActive;
-      return `<button class="booster-button${active ? ' active' : ''}" data-action="use-booster" data-booster-id="${def.id}" ${disabled && !active ? 'disabled' : ''} aria-label="${def.label}, ${count} disponible${count > 1 ? 's' : ''}"><span class="booster-symbol">${def.icon}</span><span class="booster-info"><b>${active ? 'ANNULER' : def.label}</b><small>${active ? 'Touche un carré' : def.short}</small></span><strong class="booster-count">${count}</strong></button>`;
+      return `<button class="booster-button booster-${def.id}${active ? ' active' : ''}" data-action="use-booster" data-booster-id="${def.id}" ${disabled && !active ? 'disabled' : ''} aria-label="${def.label}, ${count} disponible${count > 1 ? 's' : ''}"><span class="booster-symbol">${def.icon}</span><span class="booster-info"><b>${active ? 'ANNULER' : def.label}</b><small>${active ? def.active : def.short}</small></span><strong class="booster-count">${count}</strong></button>`;
     }).join('');
   }
 
@@ -949,7 +977,7 @@
   }
 
   function animateShopItem(attribute, value, className = 'purchase-pop') {
-    const item = $$(`[${attribute}]`).find(element => element.getAttribute(attribute) === value);
+    const item = $$(`[${attribute}]`).find(element => element.getAttribute(attribute) === value && (!element.closest('.screen') || element.closest('.screen').classList.contains('active')));
     retriggerClass(item, className);
   }
 
@@ -986,6 +1014,37 @@
       return;
     }
 
+    if (id === 'line-breaker') {
+      if (state.activeBooster === 'line-breaker') {
+        state.activeBooster = null;
+        renderBoosters();
+        $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.';
+        return;
+      }
+      if (!(profile.inventory['line-breaker'] > 0)) return showToast('Tu n’as plus de Lame de Ligne.');
+      state.activeBooster = 'line-breaker';
+      state.selectedPiece = null;
+      clearPreview();
+      renderTray();
+      renderBoosters();
+      $('#game-message').textContent = 'Lame active : touche une case de la ligne à ouvrir.';
+      playSfx('booster'); vibrate(18);
+      return;
+    }
+
+    if (id === 'scanner') {
+      if (!profile.inventory.scanner) return showToast('Tu n’as plus de Scanner Tactique.');
+      if (!state.queue.some(piece => piece && canAnyPlace(piece))) return showToast('Le Scanner ne trouve aucun fragment jouable.');
+      if (!consumeBooster('scanner')) return;
+      state.activeBooster = null;
+      state.selectedPiece = null;
+      clearPreview();
+      renderTray();
+      giveHint({ fromScanner: true });
+      playSfx('booster'); vibrate([10, 8, 18]);
+      return;
+    }
+
     if (!consumeBooster(id)) return;
     state.activeBooster = null;
     state.selectedPiece = null;
@@ -1012,24 +1071,49 @@
   }
 
   function useBoosterAtCell(row, col) {
-    if (state.activeBooster !== 'hammer' || state.resolving || !state.gameActive) return;
-    if (!state.board[row][col]) {
-      showToast('Choisis un carré occupé.');
-      vibrate(12);
+    const boosterId = state.activeBooster;
+    if (!boosterId || state.resolving || !state.gameActive) return;
+    if (boosterId === 'hammer') {
+      if (!state.board[row][col]) {
+        showToast('Choisis un carré occupé.');
+        vibrate(12);
+        return;
+      }
+      if (!consumeBooster('hammer')) return;
+      state.board[row][col] = null;
+      state.activeBooster = null;
+      state.selectedPiece = null;
+      renderBoard(); renderTray(); renderHud(); renderBoosters();
+      triggerClearEffect([[row, col]], false);
+      triggerBoardImpact('clear');
+      spawnScorePopup('LIBÉRÉ', 'clear', [[row, col]], true);
+      $('#game-message').textContent = 'Un espace vient de se libérer. À toi de jouer.';
+      showToast('Carré retiré.');
+      playSfx('booster'); vibrate([18, 14, 28]);
+      saveProfile();
       return;
     }
-    if (!consumeBooster('hammer')) return;
-    state.board[row][col] = null;
-    state.activeBooster = null;
-    state.selectedPiece = null;
-    renderBoard(); renderTray(); renderHud(); renderBoosters();
-    triggerClearEffect([[row, col]], false);
-    triggerBoardImpact('clear');
-    spawnScorePopup('LIBÉRÉ', 'clear', [[row, col]], true);
-    $('#game-message').textContent = 'Un espace vient de se libérer. À toi de jouer.';
-    showToast('Carré retiré.');
-    playSfx('booster'); vibrate([18, 14, 28]);
-    saveProfile();
+
+    if (boosterId === 'line-breaker') {
+      const rowCells = state.board[row].map((cell, index) => cell ? [row, index] : null).filter(Boolean);
+      if (!rowCells.length) {
+        showToast('Choisis une ligne qui contient des carrés.');
+        vibrate(12);
+        return;
+      }
+      if (!consumeBooster('line-breaker')) return;
+      rowCells.forEach(([r, c]) => { state.board[r][c] = null; });
+      state.activeBooster = null;
+      state.selectedPiece = null;
+      renderBoard(); renderTray(); renderHud(); renderBoosters();
+      triggerClearEffect(rowCells, true);
+      triggerBoardImpact('clear');
+      spawnScorePopup('LIGNE OUVERTE', 'clear', rowCells, true);
+      $('#game-message').textContent = 'Une ligne a été ouverte. Le rythme repart.';
+      showToast('Lame de Ligne · espace libéré.');
+      playSfx('multi-clear', 2); vibrate([20, 10, 32]);
+      saveProfile();
+    }
   }
 
   function startNewGame() {
@@ -1097,7 +1181,7 @@
     const scoreBeforeMove = state.score;
     const placedCells = piece.cells.map(([dr, dc]) => [row + dr, col + dc]);
     const placementScore = calculatePlacementScore(piece);
-    piece.cells.forEach(([dr, dc]) => { state.board[row + dr][col + dc] = { piece: piece.id, color: piece.color || getPieceColor(piece.id) }; });
+    piece.cells.forEach(([dr, dc]) => { state.board[row + dr][col + dc] = { piece: piece.id, color: getPieceColor(piece.id) }; });
     profile.stats.piecesPlaced += 1; updateMission('pieces', 1);
     state.score += placementScore;
     state.queue[index] = null; renderBoard(); renderTray(); renderHud(); animatePlacedCells(placedCells);
@@ -1369,58 +1453,318 @@
     if (mission) { $('#home-mission-title').textContent = mission.title; $('#home-mission-fill').style.width = `${clamp(mission.progress / mission.target * 100, 0, 100)}%`; }
   }
 
+  /* ===== Boutique cosmétique : métadonnées, thèmes, aperçus ===== */
+  const SHOP_META = {
+    skins: {
+      aurora: { rarity: 'ORIGINAL', tag: 'CLASSIQUE', note: 'Le bloc Pulse Grid, brillant et net.' },
+      ember: { rarity: 'RARE', tag: 'MAGMA', note: 'Cœur sombre, braise incandescente et fissure de lave.' },
+      pixel: { rarity: 'RARE', tag: 'PIXEL', note: 'Relief 8 bits, esprit borne d’arcade.' },
+      cobalt: { rarity: 'RARE', tag: 'CRISTAL', note: 'Verre glacé et reflets coupants.' },
+      lime: { rarity: 'ÉPIQUE', tag: 'GELÉE', note: 'Bonbons rebondis, reflets mouillés.' },
+      violet: { rarity: 'ÉPIQUE', tag: 'NÉON', note: 'Contours lumineux, cœur électrique.' },
+      prism: { rarity: 'MYTHIQUE', tag: 'GEMME', note: 'Facettes taillées qui captent la lumière.' },
+      solaris: { rarity: 'MYTHIQUE', tag: 'OR MASSIF', note: 'Plaques d’or brossé, rivets polis.' }
+    },
+    boards: {
+      night: { rarity: 'ORIGINAL', tag: 'CLASSIQUE', note: 'Le plateau Pulse Grid.' },
+      glass: { rarity: 'RARE', tag: 'VERRE', note: 'Surface givrée, reflets diagonaux.' },
+      carbon: { rarity: 'RARE', tag: 'CARBONE', note: 'Fibre tressée, liseré orange.' },
+      sunset: { rarity: 'ÉPIQUE', tag: 'SYNTHWAVE', note: 'Dégradé coucher de soleil, halo rose.' },
+      nebula: { rarity: 'ÉPIQUE', tag: 'COSMOS', note: 'Étoiles et gaz cosmiques en fond.' },
+      gridline: { rarity: 'MYTHIQUE', tag: 'NÉON GRID', note: 'Cases tracées au laser turquoise.' },
+      void: { rarity: 'MYTHIQUE', tag: 'VORTEX', note: 'Vortex violet, cases sombres cerclées de lumière.' }
+    },
+    effects: {
+      burst: { rarity: 'ORIGINAL', tag: 'ÉCLAT', note: 'Le feedback Pulse Grid.' },
+      ring: { rarity: 'RARE', tag: 'ONDE', note: 'Ondes de choc concentriques.' },
+      confetti: { rarity: 'ÉPIQUE', tag: 'FÊTE', note: 'Pluie de confettis multicolores.' },
+      spark: { rarity: 'ÉPIQUE', tag: 'FEU D’ARTIFICE', note: 'Traînées dorées nerveuses.' },
+      nova: { rarity: 'MYTHIQUE', tag: 'SUPERNOVA', note: 'Flash blanc et onde de choc.' },
+      magnet: { rarity: 'MYTHIQUE', tag: 'TROU NOIR', note: 'Aspiration en spirale vers le centre.' }
+    }
+  };
+
+  const RARITY_KEY = { 'ORIGINAL': 'original', 'RARE': 'rare', 'ÉPIQUE': 'epic', 'MYTHIQUE': 'mythic' };
+  const CATEGORY_LABEL = { skins: 'Fragment', boards: 'Plateau', effects: 'Impulsion' };
+  const THEME_DISCOUNT = .25;
+  const THEMES = [
+    { id: 'eclipse', name: 'Éclipse Solaire', skin: 'solaris', board: 'void', effect: 'nova', rarity: 'MYTHIQUE', tagline: 'De l’or fondu sur le vide. Chaque ligne devient une supernova.' },
+    { id: 'cosmos', name: 'Cosmos Prismatique', skin: 'prism', board: 'nebula', effect: 'magnet', rarity: 'MYTHIQUE', tagline: 'Des gemmes dans la nébuleuse, aspirées par un trou noir.' },
+    { id: 'neon', name: 'Nuit Néon', skin: 'violet', board: 'gridline', effect: 'spark', rarity: 'ÉPIQUE', tagline: 'Tubes néon sur grille laser, feux d’artifice à chaque combo.' },
+    { id: 'arcade', name: 'Arcade 88', skin: 'pixel', board: 'sunset', effect: 'confetti', rarity: 'ÉPIQUE', tagline: 'Pixels, soleil couchant et confettis : la borne de tes rêves.' },
+    { id: 'magma', name: 'Cœur de Magma', skin: 'ember', board: 'carbon', effect: 'spark', rarity: 'RARE', tagline: 'Lave et fibre de carbone. Ça chauffe à chaque ligne.' },
+    { id: 'glacier', name: 'Glacier', skin: 'cobalt', board: 'glass', effect: 'ring', rarity: 'RARE', tagline: 'Cristal, verre givré et ondes de choc glacées.' }
+  ];
+
+  const toRgba = (hex, alpha) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`; };
+  const AURORA_IDS = ['dot', 'domino-v', 'tri-h', 'tri-v', 'square', 't'];
+  function paletteColor(skin, index) {
+    if (!skin || !skin.palette) return PIECE_COLORS[AURORA_IDS[index % AURORA_IDS.length]];
+    const [primary, secondary] = skin.palette[index % skin.palette.length];
+    return { primary, secondary, soft: toRgba(secondary, .34) };
+  }
+  function skinColorForShape(skin, shapeId) {
+    if (!skin || !skin.palette) return PIECE_COLORS[shapeId] || PIECE_COLORS.dot;
+    return paletteColor(skin, Math.max(0, SHAPE_LIBRARY.findIndex(shape => shape.id === shapeId)));
+  }
+
+  const DEMO5 = [[-1, -1, -1, -1, -1], [0, 0, -1, 3, -1], [0, -1, -1, 3, 3], [1, 1, 1, -1, 2], [4, 4, -1, 4, 2]];
+  const DEMO5_BOARD = [[-1, -1, -1, -1, -1], [-1, 0, 0, -1, -1], [-1, -1, -1, 3, -1], [1, -1, -1, 3, 3], [1, 1, -1, -1, -1]];
+  const DEMO5_FX = [[-1, 0, -1, -1, -1], [-1, 0, -1, 3, 3], [4, 4, 4, 4, 4], [1, 1, -1, 2, -1], [1, -1, -1, 2, 5]];
+  const DEMO7 = [
+    [-1, -1, -1, -1, -1, -1, -1], [-1, 0, 0, -1, -1, 3, -1], [-1, 0, -1, -1, -1, 3, 3], [4, 4, 4, 4, 4, 4, 4],
+    [5, 5, -1, 2, 2, -1, 1], [5, -1, -1, -1, 2, -1, 1], [1, 1, -1, -1, -1, -1, 0]
+  ];
+
+  const FX_COLORS = { burst: ['#65e8d0', '#8b7cff'], ring: ['#78d9ff', '#65e8d0'], confetti: ['#ff7f9e', '#ffd17a'], spark: ['#ffd17a', '#fff2b3'], nova: ['#fff2b3', '#ff9b70'], magnet: ['#e09aff', '#65e8ff'] };
+  const CONFETTI_COLORS = ['#ff7f9e', '#ffd17a', '#65e8d0', '#8b7cff', '#78d9ff', '#c4f36d'];
+
+  function fxHTML(effectId, rowCenterPercent) {
+    const [c1, c2] = FX_COLORS[effectId] || FX_COLORS.burst;
+    const parts = [];
+    const add = (vars, cls = '') => parts.push(`<i${cls ? ` class="${cls}"` : ''} style="${vars}"></i>`);
+    if (effectId === 'burst') for (let i = 0; i < 14; i++) add(`--a:${i * 360 / 14}deg;--r:${58 + (i % 3) * 14};--s:7;--c:${i % 2 ? c2 : c1};--d:${(i % 4) * .02}s`);
+    else if (effectId === 'ring') for (let i = 0; i < 3; i++) add(`--s:34;--g:${3 + i * .9};--c:${i % 2 ? c2 : c1};--d:${i * .12}s`);
+    else if (effectId === 'confetti') for (let i = 0; i < 18; i++) add(`--x:${((i * 47) % 100) - 50};--u:${-(40 + (i * 13) % 46)};--f:${52 + (i * 7) % 26};--rot:${(i % 2 ? 1 : -1) * (240 + i * 22)}deg;--s:6;--c:${CONFETTI_COLORS[i % 6]};--d:${(i % 5) * .025}s`);
+    else if (effectId === 'spark') for (let i = 0; i < 12; i++) add(`--a:${i * 30 + 15}deg;--r:${72 + (i % 3) * 18};--c:${i % 2 ? c2 : c1};--d:${(i % 3) * .02}s`);
+    else if (effectId === 'nova') {
+      add(`--s:38;--c:${c1}`, 'nv-core');
+      add(`--s:30;--g:3.6;--c:${c2}`, 'nv-wave');
+      for (let i = 0; i < 10; i++) add(`--a:${i * 36}deg;--r:${52 + (i % 2) * 20};--s:6;--c:${i % 2 ? c2 : c1}`, 'nv-dot');
+    } else if (effectId === 'magnet') {
+      add(`--s:16;--c:${c1}`, 'mg-core');
+      for (let i = 0; i < 12; i++) add(`--a:${i * 30}deg;--r:${62 + (i % 3) * 14};--s:6;--c:${i % 2 ? c2 : c1};--d:${(i % 4) * .05}s`, 'mg-dot');
+    }
+    return `<div class="fxp fx-${effectId}" style="--fy:${rowCenterPercent}%">${parts.join('')}</div>`;
+  }
+
+  function themeVarsStyle(skin, board) {
+    return `--skin-primary:${skin.primary};--skin-secondary:${skin.secondary};--skin-soft:${skin.soft};--skin-contrast:${skin.contrast};--board-shell:${board.shell};--cell-bg:${board.cell};--board-glow:${board.glow};`;
+  }
+
+  function miniBoardHTML(skinId, boardId, opts = {}) {
+    const skin = findCatalog('skins', skinId); const board = findCatalog('boards', boardId);
+    const size = opts.size || 5; const layout = opts.layout || DEMO5; const clearRow = opts.clearRow ?? -1;
+    let cells = '';
+    for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
+      const value = layout[r][c];
+      if (value < 0) { cells += '<i class="cell"></i>'; continue; }
+      const color = paletteColor(skin, value);
+      cells += `<i class="cell filled${r === clearRow ? ' demo-line' : ''}" style="--piece-primary:${color.primary};--piece-secondary:${color.secondary};--piece-soft:${color.soft};--dl:${c * 28}ms"></i>`;
+    }
+    const fx = opts.effect && clearRow >= 0 ? fxHTML(opts.effect, ((clearRow + .5) / size) * 100) : '';
+    return `<div class="mini-board${opts.big ? ' big' : ''}" data-skin="${skin.id}" data-board="${board.id}" style="${themeVarsStyle(skin, board)}"><div class="board" style="grid-template-columns:repeat(${size},1fr);grid-template-rows:repeat(${size},1fr)">${cells}</div>${fx}</div>`;
+  }
+
+  function demoTrayHTML(skinId) {
+    const skin = findCatalog('skins', skinId);
+    const shapes = [[[0, 0], [1, 0], [1, 1]], [[0, 0], [0, 1], [1, 0], [1, 1]], [[0, 0], [0, 1], [0, 2]]];
+    const indexes = [2, 4, 0];
+    return `<div class="cp-tray" data-skin="${skin.id}">${shapes.map((cells, k) => {
+      const color = paletteColor(skin, indexes[k]);
+      const rows = Math.max(...cells.map(cell => cell[0])) + 1; const cols = Math.max(...cells.map(cell => cell[1])) + 1;
+      let html = '';
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) html += `<i class="mini-cell${cells.some(([pr, pc]) => pr === r && pc === c) ? '' : ' empty'}"></i>`;
+      return `<div class="piece-shape" style="--piece-cols:${cols};--piece-rows:${rows};--piece-primary:${color.primary};--piece-secondary:${color.secondary};--piece-soft:${color.soft}">${html}</div>`;
+    }).join('')}</div>`;
+  }
+
+  function themeInfo(theme) {
+    const parts = [['skins', theme.skin], ['boards', theme.board], ['effects', theme.effect]];
+    const missing = parts.filter(([category, id]) => !isUnlocked(category, id));
+    const missingSum = missing.reduce((sum, [category, id]) => sum + findCatalog(category, id).price, 0);
+    return {
+      parts, missing, full: missingSum, price: Math.round(missingSum * (1 - THEME_DISCOUNT) / 5) * 5,
+      complete: missing.length === 0, equipped: parts.every(([category, id]) => profile.equipped[category.slice(0, -1)] === id)
+    };
+  }
+
+  function refreshGameVisuals() {
+    try { renderBoard(); renderTray(); } catch (_) { /* l'écran de jeu n'est pas encore prêt */ }
+  }
+
+  function stageHTML(category, item) {
+    const equipped = profile.equipped;
+    if (category === 'skins') return miniBoardHTML(item.id, equipped.board, { size: 5, layout: DEMO5 });
+    if (category === 'boards') return miniBoardHTML(equipped.skin, item.id, { size: 5, layout: DEMO5_BOARD });
+    return miniBoardHTML(equipped.skin, equipped.board, { size: 5, layout: DEMO5_FX, clearRow: 2, effect: item.id });
+  }
+
+  function needBlock(price) {
+    const short = Math.max(0, price - profile.coins);
+    if (!short) return '';
+    return `<div class="cos-need-wrap"><span class="cos-need"><span style="width:${Math.min(100, Math.round(profile.coins / price * 100))}%"></span></span><small class="cos-need-label">Il te manque <b>◆ ${formatNumber(short)}</b></small></div>`;
+  }
+
+  function renderCatalogCard(category, item) {
+    const unlocked = isUnlocked(category, item.id); const equipped = profile.equipped[category.slice(0, -1)] === item.id;
+    const meta = SHOP_META[category]?.[item.id] || { rarity: 'RARE', tag: 'COLLECTION', note: item.description };
+    const short = item.price > profile.coins;
+    let action;
+    if (equipped) action = '<button class="cos-btn on" disabled>✓ ÉQUIPÉ</button>';
+    else if (unlocked) action = '<button class="cos-btn equip" data-action="equip-item">ÉQUIPER</button>';
+    else action = `<button class="cos-btn buy${short ? ' short' : ''}" data-action="buy-item">◆ ${formatNumber(item.price)}</button>${needBlock(item.price)}`;
+    const state = equipped ? '<span class="cos-state on">ÉQUIPÉ</span>' : unlocked ? '<span class="cos-state own">✓ POSSÉDÉ</span>' : '';
+    return `<article class="cos-card ${unlocked ? 'owned' : 'locked'}${equipped ? ' equipped-card' : ''}" data-r="${RARITY_KEY[meta.rarity]}" data-category="${category}" data-item="${item.id}">
+      <button class="cos-stage" data-action="preview-item" aria-label="Aperçu de ${item.name}">${stageHTML(category, item)}<span class="cos-rarity">${meta.rarity}</span>${state}<span class="cos-try">◉ APERÇU EN JEU</span></button>
+      <div class="cos-body"><div class="cos-name"><em>${meta.tag}</em><h3>${item.name}</h3></div><p class="cos-note">${meta.note}</p>${action}</div></article>`;
+  }
+
+  function themeCardHTML(theme) {
+    const info = themeInfo(theme); const rk = RARITY_KEY[theme.rarity];
+    const skin = findCatalog('skins', theme.skin); const board = findCatalog('boards', theme.board);
+    const chips = info.parts.map(([category, id]) => {
+      const own = isUnlocked(category, id);
+      return `<span class="tc-chip${own ? ' own' : ''}"><b>${own ? '✓' : '◆'}</b>${CATEGORY_LABEL[category]} · ${findCatalog(category, id).name}</span>`;
+    }).join('');
+    const short = info.price > profile.coins;
+    let action;
+    if (info.equipped) action = '<button class="cos-btn on" disabled>✓ THÈME ÉQUIPÉ</button>';
+    else if (info.complete) action = '<button class="cos-btn equip" data-action="equip-theme">ÉQUIPER LE THÈME</button>';
+    else action = `<button class="cos-btn buy${short ? ' short' : ''}" data-action="buy-theme"><span>OBTENIR</span>${info.full > info.price ? `<s>◆ ${formatNumber(info.full)}</s>` : ''}<b>◆ ${formatNumber(info.price)}</b></button>${needBlock(info.price)}`;
+    return `<article class="theme-card" data-r="${rk}" data-theme="${theme.id}">
+      <button class="theme-stage" data-action="preview-theme" aria-label="Aperçu du thème ${theme.name}" style="--tg1:${toRgba(skin.palette ? skin.palette[0][1] : skin.primary, .42)};--tg2:${toRgba(skin.palette ? skin.palette[2][1] : skin.secondary, .34)}">
+        <span class="theme-copy"><span class="cos-rarity static">${theme.rarity}</span><strong>${theme.name}</strong><small>${theme.tagline}</small></span>
+        ${miniBoardHTML(theme.skin, theme.board, { size: 5, layout: DEMO5_FX, clearRow: 2, effect: theme.effect })}
+        ${!info.complete && info.full > info.price ? '<span class="theme-save">−25%</span>' : ''}<span class="cos-try">◉ APERÇU EN JEU</span>
+      </button>
+      <div class="theme-body"><div class="tc-chips">${chips}</div>${action}</div></article>`;
+  }
+
+  function renderThemeShop() {
+    const complete = THEMES.filter(theme => themeInfo(theme).complete).length;
+    return `<section class="shop-hero shop-hero-themes"><div class="shop-hero-icon">❖</div><div class="shop-hero-copy"><span class="eyebrow accent">COLLECTIONS ASSORTIES</span><h2>Un look. Un tap.</h2><p>Fragments, plateau et impulsion pensés ensemble, −25% par rapport à l’unité.</p></div><div class="shop-hero-stat"><strong>${complete}/${THEMES.length}</strong><small>complets</small></div></section><div class="theme-list">${THEMES.map(themeCardHTML).join('')}</div>`;
+  }
+
+  /* ----- Aperçu en jeu (fenêtre) ----- */
+  function previewConfig(request) {
+    const equipped = profile.equipped;
+    if (request.kind === 'theme') {
+      const theme = THEMES.find(entry => entry.id === request.id); if (!theme) return null;
+      return { kind: 'theme', id: theme.id, theme, skin: theme.skin, board: theme.board, effect: theme.effect, name: theme.name, desc: theme.tagline, rarity: theme.rarity, highlight: ['skin', 'board', 'effect'] };
+    }
+    const item = findCatalog(request.category, request.id); const key = request.category.slice(0, -1);
+    const config = { kind: 'item', category: request.category, id: request.id, item, skin: equipped.skin, board: equipped.board, effect: equipped.effect, name: item.name, desc: item.description, rarity: SHOP_META[request.category][request.id].rarity, highlight: [key] };
+    config[key] = request.id;
+    return config;
+  }
+
+  function buyBlockHTML(price, strike, action, label) {
+    const short = Math.max(0, price - profile.coins);
+    return `<button class="cp-cta buy${short ? ' short' : ''}" data-action="${action}"><span>${label}</span><span class="cp-price">${strike > price ? `<s>◆ ${formatNumber(strike)}</s>` : ''}<b>◆ ${formatNumber(price)}</b></span></button>${short
+      ? `<div class="cp-short"><span class="cos-need"><span style="width:${Math.min(100, Math.round(profile.coins / price * 100))}%"></span></span><small>Il te manque <b>◆ ${formatNumber(short)}</b> · chaque partie en rapporte</small></div>`
+      : '<div class="cp-ready">✓ Tu as assez de PulseCoins</div>'}`;
+  }
+
+  function previewActionHTML(config) {
+    if (config.kind === 'theme') {
+      const info = themeInfo(config.theme);
+      if (info.equipped) return '<button class="cp-cta on" disabled>✓ THÈME ÉQUIPÉ</button>';
+      if (info.complete) return '<button class="cp-cta equip" data-action="equip-theme">ÉQUIPER LE THÈME</button>';
+      return buyBlockHTML(info.price, info.full, 'buy-theme', 'OBTENIR LE THÈME');
+    }
+    const unlocked = isUnlocked(config.category, config.id); const equipped = profile.equipped[config.category.slice(0, -1)] === config.id;
+    if (equipped) return '<button class="cp-cta on" disabled>✓ ÉQUIPÉ</button>';
+    if (unlocked) return '<button class="cp-cta equip" data-action="equip-item">ÉQUIPER</button>';
+    return buyBlockHTML(config.item.price, 0, 'buy-item', 'DÉBLOQUER');
+  }
+
+  function openCosmeticPreview(kind, category, id) {
+    state.preview = { kind, category, id };
+    const config = previewConfig(state.preview); if (!config) return;
+    const skin = findCatalog('skins', config.skin); const board = findCatalog('boards', config.board); const effect = findCatalog('effects', config.effect);
+    const rows = [['skin', 'Fragment', skin.name], ['board', 'Plateau', board.name], ['effect', 'Impulsion', effect.name]]
+      .map(([key, label, name]) => `<span class="cp-chip${config.highlight.includes(key) ? ' hl' : ''}"><small>${label}</small>${name}</span>`).join('');
+    const owner = config.kind === 'theme' ? `data-theme="${config.id}"` : `data-category="${config.category}" data-item="${config.id}"`;
+    openModal(`<div class="cp" data-r="${RARITY_KEY[config.rarity]}" ${owner}>
+      <button class="cp-close" data-action="close-modal" aria-label="Fermer">✕</button>
+      <div class="cp-stage"><span class="cp-live">● APERÇU EN JEU</span>${miniBoardHTML(config.skin, config.board, { size: 7, layout: DEMO7, clearRow: 3, effect: config.effect, big: true })}${demoTrayHTML(config.skin)}</div>
+      <div class="cp-info"><div class="cp-meta"><span class="cp-rarity">${config.rarity}</span><span class="cp-kind">${config.kind === 'theme' ? 'THÈME COMPLET' : CATEGORY_LABEL[config.category].toUpperCase()}</span></div><h2>${config.name}</h2><p>${config.desc}</p><div class="cp-chips">${rows}</div>${previewActionHTML(config)}</div></div>`, 'cosmetic-modal');
+  }
+
+  function refreshPreview() {
+    if (state.preview && $('#modal-backdrop').classList.contains('open')) openCosmeticPreview(state.preview.kind, state.preview.category, state.preview.id);
+  }
+
+  function buyTheme(id) {
+    const theme = THEMES.find(entry => entry.id === id); if (!theme) return;
+    const info = themeInfo(theme);
+    if (info.complete) { equipTheme(id); return; }
+    if (profile.coins < info.price) { showToast('Pas assez de PulseCoins pour ce thème.'); vibrate(20); return; }
+    profile.coins -= info.price;
+    info.missing.forEach(([category, itemId]) => { if (!profile.unlocked[category].includes(itemId)) profile.unlocked[category].push(itemId); });
+    info.parts.forEach(([category, itemId]) => { profile.equipped[category.slice(0, -1)] = itemId; });
+    applyTheme(); refreshGameVisuals(); saveProfile(); renderShop(); renderCollection(); renderHome(); refreshPreview();
+    showToast(`${theme.name} débloqué et équipé !`); playSfx('unlock'); vibrate(30);
+  }
+
+  function equipTheme(id) {
+    const theme = THEMES.find(entry => entry.id === id); if (!theme) return;
+    const info = themeInfo(theme); if (!info.complete) return;
+    info.parts.forEach(([category, itemId]) => { profile.equipped[category.slice(0, -1)] = itemId; });
+    applyTheme(); refreshGameVisuals(); saveProfile(); renderShop(); renderCollection(); refreshPreview();
+    showToast(`${theme.name} équipé`); playSfx('unlock');
+  }
+
+  const SHOP_COPY = {
+    skins: { kicker: 'FORME DES BLOCS', title: 'Change la matière.', detail: 'Lave, cristal, néon, or : chaque skin redessine tous tes blocs, sur la grille comme dans ta main.', icon: '✦' },
+    boards: { kicker: 'ESPACE DE JEU', title: 'Choisis ton terrain.', detail: 'Des matières et des ambiances qui transforment la grille, sans gêner la lecture.', icon: '▦' },
+    effects: { kicker: 'SIGNATURE DE COMBO', title: 'Fais sentir tes coups.', detail: 'Touche une carte pour voir l’effet jouer sur une vraie ligne.', icon: '✺' }
+  };
+
   function renderShop() {
     $('#shop-coins').textContent = formatNumber(profile.coins);
     $$('[data-shop-tab]').forEach(button => button.classList.toggle('active', button.dataset.shopTab === state.shopTab));
+    const target = $('#shop-content');
+    if (!target) return;
+    target.className = 'shop-content-shell';
     if (state.shopTab === 'boosters') {
-      $('#shop-content').innerHTML = renderBoosterShop();
+      target.innerHTML = renderBoosterShop();
       return;
     }
-    const items = CATALOG[state.shopTab];
-    $('#shop-content').innerHTML = items.map(item => renderCatalogCard(state.shopTab, item, 'shop')).join('');
+    if (state.shopTab === 'themes') {
+      target.innerHTML = renderThemeShop();
+      return;
+    }
+    const items = CATALOG[state.shopTab] || [];
+    const copy = SHOP_COPY[state.shopTab];
+    const key = state.shopTab.slice(0, -1);
+    const equipped = findCatalog(state.shopTab, profile.equipped[key]);
+    const owned = items.filter(item => isUnlocked(state.shopTab, item.id)).length;
+    target.innerHTML = `<section class="shop-hero shop-hero-${state.shopTab}"><div class="shop-hero-icon">${copy.icon}</div><div class="shop-hero-copy"><span class="eyebrow accent">${copy.kicker}</span><h2>${copy.title}</h2><p>${copy.detail}</p></div><div class="shop-hero-stat"><strong>${owned}/${items.length}</strong><small>possédés</small></div></section><div class="shop-current"><span>ÉQUIPÉ</span><strong>${equipped.name}</strong><small>${SHOP_META[state.shopTab]?.[equipped.id]?.note || equipped.description}</small></div><div class="shop-section-label">COLLECTION ${owned === items.length ? 'COMPLÈTE' : `${items.length - owned} À DÉBLOQUER`}</div><div class="cos-grid">${items.map(item => renderCatalogCard(state.shopTab, item)).join('')}</div>`;
   }
 
   function renderBoosterShop() {
     const packs = CATALOG.packs.map(pack => {
-      const contents = Object.entries(pack.contents).map(([id, count]) => {
-        const booster = CATALOG.boosters.find(item => item.id === id);
-        return `<span><b>${booster?.icon || '◆'}</b> ${count} ${booster?.name || id}</span>`;
-      }).join('');
-      return `<article class="catalog-card pack-card" data-pack-id="${pack.id}"><div class="catalog-preview pack-preview"><span>${pack.icon}</span></div><div class="pack-kicker">PACK DE BOOSTERS</div><h3>${pack.name}</h3><p>${pack.description}</p><div class="pack-contents">${contents}</div><button class="item-action buy" data-action="buy-pack">◆ ${pack.price}</button></article>`;
+      const rewardCount = Object.values(pack.contents).reduce((sum, count) => sum + count, 0);
+      return `<article class="catalog-card pack-card" data-pack-id="${pack.id}"><div class="catalog-preview pack-preview"><span>${pack.icon}</span><em>${pack.badge || 'PACK'}</em><b class="pack-question">?</b></div><div class="pack-kicker">${pack.badge || 'PACK DE BOOSTERS'} <b>${pack.savings || ''}</b></div><h3>${pack.name}</h3><p>${pack.description}</p><div class="pack-mystery"><span>?</span><div><strong>CONTENU MYSTÈRE</strong><small>${rewardCount} bonus garantis · révélés à l’ouverture</small></div></div><div class="pack-value"><span>VALEUR RUN</span><strong>${pack.savings || 'STOCK'}</strong></div><button class="item-action buy" data-action="buy-pack">◆ ${pack.price}</button></article>`;
     }).join('');
-    const boosters = CATALOG.boosters.map(item => {
-      const count = profile.inventory[item.id] || 0;
-      return `<article class="catalog-card booster-card" data-booster-id="${item.id}"><div class="catalog-preview booster-preview"><span>${item.icon}</span></div><div class="booster-card-head"><h3>${item.name}</h3><strong>${count}</strong></div><p>${item.description}</p><div class="inventory-line"><span>EN STOCK</span><b>${count}</b></div><button class="item-action buy" data-action="buy-booster">◆ ${item.price}</button></article>`;
-    }).join('');
-    return `<div class="booster-shop"><div class="booster-shop-intro"><div class="booster-shop-icon">⚡</div><div><span class="eyebrow accent">CONSOMMABLES</span><strong>Prépare ton prochain run.</strong><small>Les bonus achetés restent dans ton inventaire et se dépensent uniquement en partie.</small></div></div><div class="shop-section-label">PACKS AVANTAGEUX</div><div class="catalog-grid pack-grid">${packs}</div><div class="shop-section-label">À L'UNITÉ</div><div class="catalog-grid booster-grid">${boosters}</div></div>`;
+    const boosters = CATALOG.boosters.map(item => renderBoosterShopCard(item)).join('');
+    return `<div class="booster-shop"><section class="shop-hero shop-hero-boosters"><div class="shop-hero-icon">⚡</div><div class="shop-hero-copy"><span class="eyebrow accent">OUTILS DE RUN</span><h2>Achète un vrai avantage.</h2><p>Chaque bonus a un moment précis où il peut sauver ta grille. Pas de décoration inutile.</p></div><div class="shop-hero-stat"><strong>${Object.values(profile.inventory).reduce((sum, count) => sum + (Number(count) || 0), 0)}</strong><small>en stock</small></div></section><div class="booster-shop-intro"><div class="booster-shop-icon">◎</div><div><span class="eyebrow accent">CONSOMMABLES</span><strong>Choisis ton style de secours.</strong><small>Précision, information, tempo ou ouverture : les packs combinent des usages différents.</small></div></div><div class="shop-section-label">PACKS AVANTAGEUX</div><div class="catalog-grid pack-grid">${packs}</div><div class="shop-section-label">À L'UNITÉ · CHOISIS TON OUTIL</div><div class="catalog-grid booster-grid">${boosters}</div></div>`;
+  }
+
+  function renderBoosterShopCard(item) {
+    const count = profile.inventory[item.id] || 0;
+    const rarity = item.id === 'line-breaker' || item.id === 'pulse-core' ? 'ÉPIQUE' : item.id === 'scanner' || item.id === 'hammer' ? 'RARE' : 'TACTIQUE';
+    return `<article class="catalog-card booster-card booster-shop-card" data-booster-id="${item.id}"><div class="catalog-preview booster-preview"><span>${item.icon}</span><em>${item.tag}</em></div><div class="product-head"><span class="product-rarity" data-rarity="${rarity}">${rarity}</span><span class="product-tag">${item.tag}</span></div><div class="booster-card-head"><h3>${item.name}</h3><strong>${count}</strong></div><p>${item.description}</p><div class="booster-how"><span>UTILISATION</span>${item.howTo}</div><div class="inventory-line"><span>EN STOCK</span><b>${count}</b></div><button class="item-action buy" data-action="buy-booster">◆ ${item.price}</button></article>`;
   }
 
   function renderCollection() {
     const skin = findCatalog('skins', profile.equipped.skin); const board = findCatalog('boards', profile.equipped.board); const effect = findCatalog('effects', profile.equipped.effect);
     $('#collection-content').innerHTML = `
-      <article class="collection-hero"><div class="collection-swatch"><i></i><i></i><i></i><i></i></div><div><span class="eyebrow accent">ÉQUIPEMENT ACTUEL</span><h2>${skin.name}</h2><p>${board.name} · ${effect.name}</p></div></article>
-      <div class="collection-section"><h3>Fragments</h3><div class="catalog-grid">${CATALOG.skins.map(item => renderCatalogCard('skins', item, 'collection')).join('')}</div></div>
-      <div class="collection-section"><h3>Plateaux</h3><div class="catalog-grid">${CATALOG.boards.map(item => renderCatalogCard('boards', item, 'collection')).join('')}</div></div>
-      <div class="collection-section"><h3>Impulsions</h3><div class="catalog-grid">${CATALOG.effects.map(item => renderCatalogCard('effects', item, 'collection')).join('')}</div></div>`;
+      <article class="collection-hero">${miniBoardHTML(skin.id, board.id, { size: 5, layout: DEMO5 })}<div><span class="eyebrow accent">ÉQUIPEMENT ACTUEL</span><h2>${skin.name}</h2><p>${board.name} · ${effect.name}</p></div></article>
+      <div class="collection-section"><h3>Fragments</h3><div class="cos-grid">${CATALOG.skins.map(item => renderCatalogCard('skins', item, 'collection')).join('')}</div></div>
+      <div class="collection-section"><h3>Plateaux</h3><div class="cos-grid">${CATALOG.boards.map(item => renderCatalogCard('boards', item, 'collection')).join('')}</div></div>
+      <div class="collection-section"><h3>Impulsions</h3><div class="cos-grid">${CATALOG.effects.map(item => renderCatalogCard('effects', item, 'collection')).join('')}</div></div>`;
   }
 
   function findCatalog(category, id) { return CATALOG[category].find(item => item.id === id) || CATALOG[category][0]; }
   function isUnlocked(category, id) { return profile.unlocked[category].includes(id); }
 
-  function renderCatalogCard(category, item, mode) {
-    const unlocked = isUnlocked(category, item.id); const equipped = profile.equipped[category.slice(0, -1)] === item.id;
-    const preview = category === 'skins' ? `<div class="catalog-preview" style="--sample-a:${item.primary};--sample-b:${item.secondary};--preview-bg:linear-gradient(135deg,${item.primary}18,${item.secondary}22)"><span class="sample-grid"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>` : category === 'boards' ? `<div class="catalog-preview" style="--preview-bg:${item.preview}"><span class="sample-grid"><i style="background:${item.cell}"></i><i style="background:${item.cell}"></i><i style="background:${item.cell}"></i><i style="background:${item.cell}"></i><i style="background:${item.cell}"></i><i style="background:${item.cell}"></i></span></div>` : `<div class="catalog-preview effect-preview" style="--preview-bg:linear-gradient(135deg,rgba(101,232,208,.08),rgba(139,124,255,.12))"><span class="effect-symbol">${item.icon}</span></div>`;
-    let action = '';
-    if (equipped) action = `<button class="item-action equipped" disabled>ÉQUIPÉ</button>`;
-    else if (unlocked) action = `<button class="item-action" data-action="equip-item">ÉQUIPER</button>`;
-    else action = `<button class="item-action buy" data-action="buy-item">${item.price === 0 ? 'GRATUIT' : `◆ ${item.price}`}</button>`;
-    return `<article class="catalog-card ${unlocked ? '' : 'locked'}" data-category="${category}" data-item="${item.id}">${!unlocked ? '<span class="lock-label">VERROUILLÉ</span>' : ''}${preview}<h3>${item.name}</h3><p>${item.description}</p>${action}</article>`;
-  }
-
   function buyItem(category, id) {
     if (!category || !id) return; const item = findCatalog(category, id); if (isUnlocked(category, id)) { equipItem(category, id); return; }
     if (profile.coins < item.price) { showToast('Pas assez de PulseCoins pour cet élément.'); vibrate(20); return; }
-    profile.coins -= item.price; profile.unlocked[category].push(id); saveProfile(); renderShop(); renderCollection(); renderHome(); animateShopItem('data-item', id); showToast(`${item.name} débloqué !`); playSfx('unlock'); vibrate(22);
+    profile.coins -= item.price; profile.unlocked[category].push(id); saveProfile(); renderShop(); renderCollection(); renderHome(); animateShopItem('data-item', id); showToast(`${item.name} débloqué !`); playSfx('unlock'); vibrate(22); refreshPreview();
   }
 
   function buyBooster(id) {
@@ -1438,26 +1782,277 @@
     playSfx('purchase'); vibrate(22);
   }
 
+  function buildPackRewards(pack) {
+    const rewards = Object.entries(pack.contents).flatMap(([id, amount]) => Array.from({ length: amount }, () => id));
+    for (let index = rewards.length - 1; index > 0; index--) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [rewards[index], rewards[swapIndex]] = [rewards[swapIndex], rewards[index]];
+    }
+    return rewards;
+  }
+
   function buyPack(id) {
     const pack = CATALOG.packs.find(item => item.id === id);
-    if (!pack) return;
+    if (!pack || state.packOpening) return;
     if (profile.coins < pack.price) {
       showToast('Pas assez de PulseCoins pour ce pack.');
       vibrate(20);
       return;
     }
+    const rewards = buildPackRewards(pack);
     profile.coins -= pack.price;
-    Object.entries(pack.contents).forEach(([boosterId, amount]) => {
-      profile.inventory[boosterId] = (profile.inventory[boosterId] || 0) + amount;
-    });
+    rewards.forEach(boosterId => { profile.inventory[boosterId] = (profile.inventory[boosterId] || 0) + 1; });
     saveProfile(); renderShop(); renderHome(); renderBoosters(); animateShopItem('data-pack-id', id);
-    showToast(`${pack.name} ouvert : bonus ajoutés !`);
-    playSfx('purchase'); vibrate([18, 14, 30]);
+    openPackOpening(pack, rewards);
+  }
+
+  /* ===== Ouverture de pack : cinématique plein écran ===== */
+  const PACK_RARITY = {
+    common: { key: 'common', label: 'COMMUN', rank: 0 },
+    rare: { key: 'rare', label: 'RARE', rank: 1 },
+    epic: { key: 'epic', label: 'ÉPIQUE', rank: 2 }
+  };
+  const BOOSTER_RARITY = { scanner: 'common', hammer: 'common', reroll: 'rare', 'pulse-core': 'epic', 'line-breaker': 'epic' };
+  const packRarityOf = id => PACK_RARITY[BOOSTER_RARITY[id] || 'common'];
+  let packTimers = [];
+  const packLater = (callback, delay) => { const id = setTimeout(callback, delay); packTimers.push(id); return id; };
+  const clearPackTimers = () => { packTimers.forEach(clearTimeout); packTimers = []; };
+
+  function packSound(kind) {
+    if (kind === 'charge') playTone(140, 1.1, { type: 'sawtooth', gain: .022, to: 720 });
+    else if (kind === 'burst') {
+      playTone(120, .42, { type: 'square', gain: .05, to: 40 });
+      [523, 784, 1047].forEach((frequency, i) => packLater(() => playTone(frequency, .22, { type: 'sine', gain: .04 }), 90 + i * 80));
+    }
+    else if (kind === 'whoosh') playTone(280, .22, { type: 'triangle', gain: .022, to: 900 });
+    else if (kind === 'common') playSfx('booster');
+    else if (kind === 'rare') playSfx('unlock');
+    else if (kind === 'epic') {
+      playTone(100, .35, { type: 'square', gain: .045, to: 45 });
+      [523, 659, 784, 1047, 1319].forEach((frequency, i) => packLater(() => playTone(frequency, .2, { type: 'sine', gain: .04 }), 60 + i * 75));
+    }
+  }
+
+  function spawnPackParticles(container, count, tone, inward = false) {
+    if (!container) return;
+    const layer = document.createElement('span');
+    layer.className = `pc-particles${tone === 'blue' ? ' blue' : ''}${inward ? ' inward' : ''}`;
+    let html = '';
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * 360 + Math.random() * 12;
+      const distance = 90 + Math.random() * 140;
+      const size = 4 + Math.random() * 7;
+      const time = .7 + Math.random() * .55;
+      html += `<i style="--a:${angle.toFixed(1)}deg;--d:${distance.toFixed(0)}px;--s:${size.toFixed(1)}px;--t:${time.toFixed(2)}s"></i>`;
+    }
+    layer.innerHTML = html;
+    container.appendChild(layer);
+    packLater(() => layer.remove(), 1500);
+  }
+
+  function openPackOpening(pack, rewards) {
+    closePackCinema(true);
+    state.packOpening = true;
+    // Les meilleurs bonus sortent en dernier, pour le suspense.
+    const ordered = rewards.map((id, order) => ({ id, order }))
+      .sort((a, b) => packRarityOf(a.id).rank - packRarityOf(b.id).rank || a.order - b.order)
+      .map(item => item.id);
+    const total = ordered.length;
+    const face = `<div class="pc-face"><span class="pc-face-icon">${pack.icon}</span><b>${pack.badge || 'PACK'}</b><em>PULSE GRID</em><i class="pc-shine"></i></div>`;
+    const root = document.createElement('div');
+    root.id = 'pack-cinema';
+    root.className = 'pc';
+    root.dataset.phase = 'sealed';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-label', `Ouverture : ${pack.name}`);
+    root.innerHTML = `
+      <div class="pc-bg"><i class="pc-rays"></i><i class="pc-vignette"></i></div>
+      <div class="pc-ambient">${Array.from({ length: 16 }, (_, i) => `<i style="left:${(i * 37 + 7) % 100}%;--s:${3 + (i * 5) % 6}px;--t:${5 + (i * 7) % 6}s;--dl:-${(i * 13) % 9}s"></i>`).join('')}</div>
+      <button class="pc-skip" type="button">PASSER ›</button>
+      <div class="pc-top"><span class="pc-kicker">${pack.name}</span><div class="pc-dots">${ordered.map(() => '<i></i>').join('')}</div></div>
+      <div class="pc-stage">
+        <div class="pc-pack">
+          <i class="pc-glow"></i><i class="pc-wave"></i><i class="pc-wave w2"></i><i class="pc-ring"></i><i class="pc-ring r2"></i><i class="pc-ring r3"></i>
+          <div class="pc-orbit"><i></i><i></i><i></i></div><div class="pc-orbit o2"><i></i><i></i></div>
+          <div class="pc-sway"><div class="pc-box">
+            <div class="pc-half top">${face}</div>
+            <div class="pc-half bottom">${face}</div>
+            <i class="pc-seam"></i><i class="pc-beam"></i>
+          </div></div>
+        </div>
+        <div class="pc-card-slot"></div>
+        <i class="pc-shock"></i>
+        <i class="pc-flash"></i>
+      </div>
+      <div class="pc-hint on">TOUCHE POUR OUVRIR</div>
+      <div class="pc-summary"></div>`;
+    ($('#app') || document.body).appendChild(root);
+
+    const stage = root.querySelector('.pc-stage');
+    const slot = root.querySelector('.pc-card-slot');
+    const hint = root.querySelector('.pc-hint');
+    const flash = root.querySelector('.pc-flash');
+    const summary = root.querySelector('.pc-summary');
+    const dots = [...root.querySelectorAll('.pc-dots i')];
+    const openedAt = Date.now();
+    let current = 0;
+    let cardState = 'locked';
+    let currentCard = null;
+
+    const setHint = text => { if (text) hint.textContent = text; hint.classList.toggle('on', !!text); };
+    const updateDots = () => dots.forEach((dot, index) => {
+      dot.classList.toggle('on', index < current);
+      dot.classList.toggle('cur', index === current);
+    });
+    const fireFlash = () => { flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); };
+    const shakeStage = () => {
+      stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+      packLater(() => stage.classList.remove('shake'), 540);
+    };
+
+    function startOpening() {
+      root.dataset.phase = 'opening';
+      setHint('');
+      root.classList.add('is-charging');
+      packSound('charge');
+      vibrate([10, 50, 14, 50, 20, 50, 28, 50, 36]);
+      [0, 380, 760].forEach(delay => packLater(() => spawnPackParticles(stage, 14, 'gold', true), delay));
+      packLater(() => {
+        root.classList.add('is-burst');
+        packSound('burst');
+        vibrate([40, 20, 80]);
+        spawnPackParticles(stage, 30, 'gold');
+      }, 1150);
+      packLater(() => showCard(0), 1500);
+    }
+
+    function showCard(index) {
+      const id = ordered[index];
+      const booster = CATALOG.boosters.find(item => item.id === id);
+      if (!booster) { showSummary(); return; }
+      const rarity = packRarityOf(id);
+      root.removeAttribute('data-rarity');
+      root.dataset.phase = 'card';
+      current = index;
+      cardState = 'busy';
+      slot.insertAdjacentHTML('beforeend', `<div class="pc-card rar-${rarity.key} ${index === 0 ? 'enter-first' : 'enter'}"><i class="pc-aura"></i><div class="pc-float"><div class="pc-tilt"><div class="pc-card-inner">
+        <div class="pc-back"><span>✦</span><small>BONUS ${index + 1} / ${total}</small></div>
+        <div class="pc-front"><i class="pc-foil"></i><span class="pc-rarity">${rarity.label}</span><div class="pc-icon-wrap"><span class="pc-icon">${booster.icon}</span></div><strong>${booster.name}</strong><small class="pc-tag">${booster.tag}</small><p>${booster.description}</p><b class="pc-plus">+1</b></div>
+      </div></div></div></div>`);
+      currentCard = slot.lastElementChild;
+      updateDots();
+      setHint('');
+      packSound('whoosh');
+      vibrate(8);
+      packLater(() => { cardState = 'back'; setHint('TOUCHE POUR RÉVÉLER'); }, 480);
+    }
+
+    function flipCard() {
+      const rarity = packRarityOf(ordered[current]);
+      cardState = 'busy';
+      setHint('');
+      currentCard.classList.add('flipped');
+      playSfx('select');
+      packLater(() => {
+        root.dataset.rarity = rarity.key;
+        currentCard.classList.add('revealed');
+        packSound(rarity.key);
+        if (rarity.key === 'epic') { spawnPackParticles(stage, 34, 'gold'); fireFlash(); shakeStage(); vibrate([24, 16, 46, 16, 70]); }
+        else if (rarity.key === 'rare') { spawnPackParticles(stage, 16, 'blue'); fireFlash(); vibrate([16, 10, 30]); }
+        else { spawnPackParticles(stage, 8, 'blue'); vibrate(14); }
+      }, 320);
+      packLater(() => {
+        cardState = 'front';
+        setHint(current >= total - 1 ? 'TOUCHE POUR VOIR TON BUTIN' : 'TOUCHE POUR CONTINUER');
+      }, 820);
+    }
+
+    function nextCard() {
+      cardState = 'busy';
+      setHint('');
+      const old = currentCard;
+      resetTilt();
+      old.classList.remove('enter', 'enter-first');
+      old.classList.add('leave');
+      packLater(() => old.remove(), 340);
+      if (current >= total - 1) packLater(showSummary, 300);
+      else packLater(() => showCard(current + 1), 140);
+    }
+
+    function showSummary() {
+      clearPackTimers();
+      cardState = 'locked';
+      root.removeAttribute('data-rarity');
+      const counts = new Map();
+      ordered.forEach(id => counts.set(id, (counts.get(id) || 0) + 1));
+      const entries = [...counts.entries()].sort((a, b) => packRarityOf(b[0]).rank - packRarityOf(a[0]).rank);
+      const tiles = entries.map(([id, count], index) => {
+        const booster = CATALOG.boosters.find(item => item.id === id);
+        const rarity = packRarityOf(id);
+        return `<div class="pc-tile rar-${rarity.key}" style="--d:${120 + index * 90}ms"><b class="t-count">×${count}</b><span class="t-icon">${booster.icon}</span><strong>${booster.name}</strong><small>${rarity.label}</small></div>`;
+      }).join('');
+      summary.innerHTML = `<span class="pc-sum-kicker">BUTIN DU PACK</span><h2>${pack.name}</h2><div class="pc-sum-grid">${tiles}</div><p class="pc-sum-total">${total} bonus ajoutés à ton inventaire</p><button class="pc-done" type="button">TERMINER</button>`;
+      summary.scrollTop = 0;
+      root.dataset.phase = 'summary';
+      summary.querySelector('.pc-done').addEventListener('click', finishPackOpening);
+      playSfx('unlock');
+      vibrate([14, 8, 26]);
+    }
+
+    let tiltFrame = 0;
+    let tiltX = 0;
+    let tiltY = 0;
+    function resetTilt() {
+      const el = currentCard && currentCard.querySelector('.pc-tilt');
+      if (el) { el.classList.remove('live'); el.style.transform = ''; }
+    }
+    function applyTilt() {
+      tiltFrame = 0;
+      const el = currentCard && currentCard.querySelector('.pc-tilt');
+      if (!el || root.dataset.phase !== 'card') return;
+      const rect = stage.getBoundingClientRect();
+      const nx = clamp((tiltX - (rect.left + rect.width / 2)) / (rect.width / 2), -1, 1);
+      const ny = clamp((tiltY - (rect.top + rect.height / 2)) / (rect.height / 2), -1, 1);
+      el.classList.add('live');
+      el.style.transform = `rotateY(${(nx * 18).toFixed(1)}deg) rotateX(${(-ny * 18).toFixed(1)}deg)`;
+    }
+    const onTilt = event => { tiltX = event.clientX; tiltY = event.clientY; if (!tiltFrame) tiltFrame = scheduleFrame(applyTilt); };
+    root.addEventListener('pointerdown', onTilt);
+    root.addEventListener('pointermove', onTilt);
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(name => root.addEventListener(name, resetTilt));
+
+    root.addEventListener('click', event => {
+      if (event.target.closest('button') || Date.now() - openedAt < 350) return;
+      const phase = root.dataset.phase;
+      if (phase === 'sealed') startOpening();
+      else if (phase === 'card' && cardState === 'back') flipCard();
+      else if (phase === 'card' && cardState === 'front') nextCard();
+    });
+    root.querySelector('.pc-skip').addEventListener('click', event => { event.stopPropagation(); showSummary(); });
+
+    playSfx('purchase');
+    vibrate([18, 12, 30]);
+  }
+
+  function closePackCinema(immediate = false) {
+    clearPackTimers();
+    const root = $('#pack-cinema');
+    if (root) {
+      if (immediate) root.remove();
+      else { root.classList.add('closing'); setTimeout(() => root.remove(), 260); }
+    }
+    state.packOpening = false;
+  }
+
+  function finishPackOpening() {
+    if (!state.packOpening) return;
+    closePackCinema();
   }
 
   function equipItem(category, id) {
     if (!category || !id || !isUnlocked(category, id)) return;
-    const key = category.slice(0, -1); profile.equipped[key] = id; applyTheme(); saveProfile(); renderShop(); renderCollection(); animateShopItem('data-item', id, 'equip-pop'); showToast(`${findCatalog(category, id).name} équipé`); playSfx('unlock');
+    const key = category.slice(0, -1); profile.equipped[key] = id; applyTheme(); refreshGameVisuals(); saveProfile(); renderShop(); renderCollection(); refreshPreview(); animateShopItem('data-item', id, 'equip-pop'); showToast(`${findCatalog(category, id).name} équipé`); playSfx('unlock');
   }
 
   function renderMissions() {
@@ -1473,17 +2068,22 @@
     $('#stats-content').innerHTML = `<article class="stats-level-card"><div class="stats-level-top"><div><span class="eyebrow accent">NIVEAU ACTUEL</span><h2>Architecte de pulse</h2></div><strong>${profile.level}</strong></div><p>${formatNumber(profile.xp)} / ${formatNumber(next)} XP avant le niveau ${profile.level + 1}</p><div class="xp-track"><span style="width:${ratio}%"></span></div></article><div class="stats-grid"><article class="stat-box"><span>Meilleur score</span><strong>${formatNumber(profile.best)}</strong><em>record personnel</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(stats.games)}</strong><em>tentatives</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(stats.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(stats.bestCombo)}</strong><em>chaîne maximale</em></article><article class="stat-box"><span>Score cumulé</span><strong>${formatNumber(stats.totalScore)}</strong><em>toutes parties</em></article><article class="stat-box"><span>Fragments posés</span><strong>${formatNumber(stats.piecesPlaced)}</strong><em>patience & précision</em></article><article class="stat-box"><span>Pulse Bursts</span><strong>${formatNumber(stats.pulseBursts)}</strong><em>surcharges parfaites</em></article><article class="stat-box"><span>Bonus utilisés</span><strong>${formatNumber(stats.boostersUsed)}</strong><em>coups de secours</em></article></div><div class="tip-card">Les scores, objets et missions sont enregistrés automatiquement sur cet appareil grâce à <strong>localStorage</strong>. Ferme le jeu sans crainte : ta progression reste là.</div>`;
   }
 
-  function giveHint() {
-    if (!state.gameActive || state.resolving) return;
-    const piece = state.queue.find(item => item && canAnyPlace(item)); if (!piece) return showToast('Aucun fragment ne peut être posé.');
+  function giveHint(options = {}) {
+    if (!state.gameActive || state.resolving) return false;
+    const piece = state.queue.find(item => item && canAnyPlace(item));
+    if (!piece) { showToast('Aucun fragment ne peut être posé.'); return false; }
     let best = null; let bestValue = -Infinity;
     for (let r = 0; r < GRID; r++) for (let c = 0; c < GRID; c++) if (canPlace(piece, r, c)) {
       let value = 0; piece.cells.forEach(([dr, dc]) => { const rr = r + dr; const cc = c + dc; if (rr === 0 || rr === GRID - 1) value += .5; if (cc === 0 || cc === GRID - 1) value += .5; });
       const nearFull = [...Array(GRID)].map((_, i) => state.board[r + i]?.filter(Boolean).length || 0).reduce((a, b) => a + b, 0); value += nearFull * .01;
       if (value > bestValue) { bestValue = value; best = { r, c }; }
     }
-    const index = state.queue.indexOf(piece); selectPiece(index); showPreview(piece, getPlacementFromTopLeft(piece, best.r, best.c)); showToast('Indice : cette position garde de l’espace pour la suite.');
+    const index = state.queue.indexOf(piece);
+    selectPiece(index);
+    showPreview(piece, getPlacementFromTopLeft(piece, best.r, best.c));
+    showToast(options.fromScanner ? 'Scanner : position forte révélée.' : 'Indice : cette position garde de l’espace pour la suite.');
     setTimeout(clearPreview, 1100);
+    return true;
   }
 
   function openPauseModal() {
@@ -1501,8 +2101,24 @@
     openModal(`${recordBanner}<span class="modal-kicker ${isNewRecord ? 'record-kicker' : ''}">${recordKicker}</span><h2>${recordTitle}</h2><p>${recordMessage}</p><div class="result-score ${isNewRecord ? 'record-score' : ''}"><span>SCORE</span><strong>${formatNumber(state.score)}</strong></div><div class="result-stats"><div class="result-stat"><strong>${formatNumber(state.lines)}</strong><span>lignes supprimées</span></div><div class="result-stat"><strong>×${formatNumber(Math.max(profile.stats.bestCombo, state.bestComboInGame))}</strong><span>meilleur combo</span></div><div class="result-stat"><strong>${formatNumber(state.turn)}</strong><span>pièces posées</span></div><div class="result-stat"><strong>${formatNumber(profile.best)}</strong><span>meilleur score</span></div></div><div class="reward-row"><div>◆ ${reward}<span>PulseCoins</span></div><div>✦ ${xpEarned}<span>XP gagnés</span></div></div>${levelText}<div class="modal-actions"><button class="secondary" data-action="go-home">ACCUEIL</button><button class="primary" data-action="restart">REJOUER</button></div>`);
   }
 
-  function openModal(content) { $('#modal-card').innerHTML = content; $('#modal-backdrop').classList.add('open'); $('#modal-backdrop').setAttribute('aria-hidden', 'false'); }
-  function closeModal() { $('#modal-backdrop').classList.remove('open'); $('#modal-backdrop').setAttribute('aria-hidden', 'true'); if (state.gameActive) state.paused = false; }
+  function openModal(content, variant = '') {
+    const modalCard = $('#modal-card');
+    modalCard.className = `modal-card${variant ? ` ${variant}` : ''}`;
+    modalCard.innerHTML = content;
+    $('#modal-backdrop').classList.add('open');
+    $('#modal-backdrop').setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal() {
+    state.preview = null;
+    if (state.packOpeningTimer !== null) clearTimeout(state.packOpeningTimer);
+    state.packOpeningTimer = null;
+    state.packOpening = false;
+    $('#modal-card').className = 'modal-card';
+    $('#modal-backdrop').classList.remove('open');
+    $('#modal-backdrop').setAttribute('aria-hidden', 'true');
+    if (state.gameActive) state.paused = false;
+  }
 
   function triggerClearEffect(cells, pulseBurst = false) {
     const layer = $('#fx-layer'); if (!layer) return;
@@ -1512,12 +2128,12 @@
       : cells.slice(0, 16);
     particleCells.forEach(([r, c], index) => {
       const particle = document.createElement('i');
-      const type = pulseBurst ? 'pulse-particle' : effect === 'ring' ? 'ring' : effect === 'confetti' ? 'round' : '';
+      const type = pulseBurst ? 'pulse-particle' : effect === 'ring' ? 'ring' : effect === 'confetti' ? 'round' : effect === 'nova' ? 'nova-particle' : effect === 'magnet' ? 'magnet-particle' : '';
       particle.className = `fx-particle ${type}`;
       const x = ((c + .5) / GRID) * 100; const y = ((r + .5) / GRID) * 100;
       particle.style.left = `${x}%`; particle.style.top = `${y}%`; particle.style.setProperty('--dx', `${(Math.random() - .5) * (pulseBurst ? 150 : 95)}px`); particle.style.setProperty('--dy', `${-15 - Math.random() * (pulseBurst ? 110 : 75)}px`); particle.style.animationDelay = `${index * (pulseBurst ? 7 : 12)}ms`; layer.appendChild(particle); setTimeout(() => particle.remove(), pulseBurst ? 1100 : 850);
     });
-    if (pulseBurst || effect === 'spark') layer.animate([{ opacity: .35 }, { opacity: 1 }, { opacity: .35 }], { duration: pulseBurst ? 440 : 320, iterations: 2 });
+    if (pulseBurst || effect === 'spark' || effect === 'nova' || effect === 'magnet') layer.animate([{ opacity: .35 }, { opacity: 1 }, { opacity: .35 }], { duration: pulseBurst ? 440 : effect === 'nova' ? 260 : 360, iterations: 2 });
   }
 
   function showClearFeedback(count) {
