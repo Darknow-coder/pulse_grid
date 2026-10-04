@@ -94,3 +94,25 @@ Nouveaux champs de sauvegarde : `reduceMotion`, `showTip` (défauts créés auto
 - **23 trophées** avec récompenses en pièces automatiques, écran Trophées, compteur sur l'accueil.
 - **Partage du score** (feuille de partage native, sinon copie).
 - Anciennes sauvegardes compatibles : `tutorialDone`, `achievements`, `perfectClears` créés par défaut ; un joueur existant ne revoit pas le tutoriel.
+
+
+---
+
+## v5.1 — Finitions
+
+- Jeu d'icônes SVG cohérent (sprite en tête de `index.html`, classe `.ico`) à la place des emojis et glyphes ; plus aucun emoji dans l'interface.
+- Textes d'interface plus sobres (titres et sous-titres neutres, moins de ton publicitaire).
+- Écran « Confidentialité et crédits » + `privacy.html` (URL exigée par les stores).
+- Garde-fous : une erreur isolée affiche un message discret au lieu de figer l'écran ; l'écran de chargement se retire seul au bout de 6 s.
+- Le réglage système « réduire les animations » est respecté ; focus clavier visible ; cibles tactiles ≥ 44 px ; chiffres tabulaires.
+- Service worker en `pulse-grid-5.1.0` (inclut `privacy.html`).
+
+
+---
+
+## v5.2 — Corrections et confort de jeu
+
+- **Correction** : les sons de la cinématique d'ouverture des packs (`playTone`) avaient été perdus lors de la refonte audio ; ils sont restaurés.
+- **Continuer après blocage** : quand plus aucun fragment ne rentre, une offre propose de continuer pour 150 PulseCoins (une fois par partie, à partir du 6e coup). Environ 20 % des cases sont libérées (lignes les plus remplies), de nouveaux fragments sont donnés, score et progression conservés. Fermer l'offre sans choisir termine la partie. Coût : `REVIVE_COST` dans game.js.
+- **Équilibrage du losange** (simulations par bot) : pièces plus petites, lignes de 3 cases ou plus, objectif de maîtrise réduit (40 lignes, score 2 600). Il ne bloque plus brutalement après le triangle.
+- Service worker en `pulse-grid-5.2.0`.

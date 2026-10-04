@@ -1,7 +1,7 @@
 /* Pulse Grid — service worker : jeu 100 % jouable hors ligne.
    Change VERSION à chaque mise en ligne pour forcer la mise à jour du cache. */
-const VERSION = 'pulse-grid-5.0.0';
-const CORE = ['./', 'index.html', 'style.css', 'game.js', 'manifest.webmanifest',
+const VERSION = 'pulse-grid-5.2.0';
+const CORE = ['./', 'index.html', 'style.css', 'game.js', 'manifest.webmanifest', 'privacy.html',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-192.png', 'icons/maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon-64.png'];
 

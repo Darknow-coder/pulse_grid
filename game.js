@@ -5,7 +5,7 @@
   const GRID = 8;
   const QUEUE_SIZE = 3;
   const SAVE_KEY = 'pulse-grid-save-v1';
-  const APP_VERSION = '5.0';
+  const APP_VERSION = '5.2';
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -166,9 +166,9 @@
       id: 'diamond', name: 'Losange', icon: '◆', accent: '#ff7f9e', rows: 10, cols: 10,
       cell: (r, c, R, C) => Math.abs(r - (R - 1) / 2) + Math.abs(c - (C - 1) / 2) <= R / 2,
       tagline: 'Le cœur du diamant',
-      rule: 'Losange de 60 cases. Les 4 bords diagonaux sont des lignes spéciales (×2), en plus des lignes et colonnes de 4 cases ou plus. Pièces en pyramide.',
+      rule: 'Losange de 60 cases, sans bord droit : les petites pièces sont reines. Les 4 bords diagonaux sont des lignes spéciales (×2), en plus des lignes et colonnes de 3 cases ou plus.',
       specialLabel: 'Bords du losange',
-      lines: [{ kind: 'rows', min: 4 }, { kind: 'cols', min: 4 }, {
+      lines: [{ kind: 'rows', min: 3 }, { kind: 'cols', min: 3 }, {
         kind: 'custom', name: 'rim', min: 5, weight: 2, special: true,
         key: (r, c) => {
           const dr = r - 4.5; const dc = c - 4.5;
@@ -177,10 +177,8 @@
         }
       }],
       starter: [['domino-h', 'plus', 'tri-h'], ['l-small', 'square', 'domino-v']],
-      pool: [['dot', 1], ['domino-h', 1], ['domino-v', 1], ['tri-h', 1], ['tri-v', 1], ['square', 1], ['l-small', 1], ['l3-b', 1],
-        ['l3-c', 1], ['l3-d', 1], ['plus', 1.6], ['t', 1], ['t-up', 1], ['t-left', 1], ['t-right', 1], ['z', .9], ['s', .9],
-        ['pyr-9', 1.2], ['pyr-9-i', 1.2], ['line-4-h', .6], ['line-4-v', .6]],
-      mastery: { lines: 45, combo: 4, score: 2800, special: 3 },
+      pool: [['dot', 2], ['domino-h', 1.6], ['domino-v', 1.6], ['tri-h', 1.2], ['tri-v', 1.2], ['square', .8], ['l-small', 1.1], ['l3-b', 1], ['l3-c', 1], ['l3-d', 1], ['plus', .5], ['t-up', .6], ['t-left', .6], ['t-right', .6], ['z', .5], ['s', .5], ['line-4-h', .5], ['line-4-v', .5]],
+      mastery: { lines: 40, combo: 4, score: 2600, special: 3 },
       reward: { coins: 260, xp: 300 }
     },
     {
@@ -303,7 +301,7 @@
     boosters: [
       { id: 'hammer', name: 'Éclateur', price: 75, description: 'Retire un carré précis sans casser ton rythme.', icon: '⌁', tag: 'PRÉCISION', howTo: 'Active puis touche un carré occupé.' },
       { id: 'reroll', name: 'Recomposition', price: 95, description: 'Change les fragments disponibles quand la main ne répond plus.', icon: '⟳', tag: 'OPTIONS', howTo: 'Remplace les fragments encore libres.' },
-      { id: 'pulse-core', name: 'Surcharge Pulse', price: 135, description: 'Remplit la charge pour préparer une Pulse Burst immédiate.', icon: '⚡', tag: 'COMBO', howTo: 'La prochaine ligne déclenche la Burst.' },
+      { id: 'pulse-core', name: 'Surcharge Pulse', price: 135, description: 'Remplit la charge pour préparer une Pulse Burst immédiate.', icon: '\u26A1\uFE0E', tag: 'COMBO', howTo: 'La prochaine ligne déclenche la Burst.' },
       { id: 'scanner', name: 'Scanner Tactique', price: 60, description: 'Révèle une position forte sans jouer à ta place.', icon: '⌕', tag: 'INTEL', howTo: 'Active pour afficher le meilleur fragment.' },
       { id: 'line-breaker', name: 'Lame de Ligne', price: 145, description: 'Ouvre une ligne horizontale au point faible de ta grille.', icon: '╾', tag: 'SECOURS', howTo: 'Active puis touche une case de la ligne.' }
     ],
@@ -322,7 +320,7 @@
     { level: 5, type: 'skin', id: 'cobalt', icon: '✦', title: 'Skin Cobalt', milestone: true },
     { level: 6, type: 'coins', amount: 120, icon: '◆', title: 'Réserve renforcée' },
     { level: 7, type: 'pack', id: 'starter', amount: 1, icon: '▣', title: 'Pack de départ' },
-    { level: 8, type: 'booster', id: 'pulse-core', amount: 1, icon: '⚡', title: 'Noyau Pulse' },
+    { level: 8, type: 'booster', id: 'pulse-core', amount: 1, icon: '\u26A1\uFE0E', title: 'Noyau Pulse' },
     { level: 9, type: 'coins', amount: 140, icon: '◆', title: 'Réserve brillante' },
     { level: 10, type: 'board', id: 'glass', icon: '▦', title: 'Plateau Verre fumé', milestone: true },
     { level: 11, type: 'coins', amount: 150, icon: '◆', title: 'PulseCoins' },
@@ -332,7 +330,7 @@
     { level: 15, type: 'skin', id: 'lime', icon: '✦', title: 'Skin Lime Shift', milestone: true },
     { level: 16, type: 'pack', id: 'combo', amount: 1, icon: '▣', title: 'Pack Combo' },
     { level: 17, type: 'coins', amount: 200, icon: '◆', title: 'PulseCoins' },
-    { level: 18, type: 'booster', id: 'pulse-core', amount: 2, icon: '⚡', title: 'Double Noyau Pulse' },
+    { level: 18, type: 'booster', id: 'pulse-core', amount: 2, icon: '\u26A1\uFE0E', title: 'Double Noyau Pulse' },
     { level: 19, type: 'coins', amount: 220, icon: '◆', title: 'Réserve avancée' },
     { level: 20, type: 'effect', id: 'confetti', icon: '✧', title: 'Effet Confettis', milestone: true },
     { level: 21, type: 'coins', amount: 240, icon: '◆', title: 'PulseCoins' },
@@ -485,7 +483,7 @@
 
   function ensureMissionsForToday(target = profile) {
     if (target.missionDate === dateKey() && Array.isArray(target.missions) && target.missions.length) {
-      if (!target.missions.some(mission => mission.type === 'pulse')) target.missions.push({ id: 'pulse', type: 'pulse', title: 'Déclencher 1 Pulse Burst', detail: 'Atteins la charge maximale', target: 1, progress: 0, reward: 90, icon: '⚡', claimed: false });
+      if (!target.missions.some(mission => mission.type === 'pulse')) target.missions.push({ id: 'pulse', type: 'pulse', title: 'Déclencher 1 Pulse Burst', detail: 'Atteins la charge maximale', target: 1, progress: 0, reward: 90, icon: '\u26A1\uFE0E', claimed: false });
       return;
     }
     target.missionDate = dateKey();
@@ -495,7 +493,7 @@
       { id: 'combo', type: 'combo', title: 'Atteindre un combo de 3', detail: 'Sans quitter la partie', target: 3, progress: 0, reward: 80, icon: '✦', claimed: false },
       { id: 'games', type: 'games', title: 'Jouer 2 parties', detail: 'Chaque tentative compte', target: 2, progress: 0, reward: 45, icon: '◉', claimed: false },
       { id: 'pieces', type: 'pieces', title: 'Poser 18 fragments', detail: 'Toutes parties confondues', target: 18, progress: 0, reward: 50, icon: '◆', claimed: false },
-      { id: 'pulse', type: 'pulse', title: 'Déclencher 1 Pulse Burst', detail: 'Atteins la charge maximale', target: 1, progress: 0, reward: 90, icon: '⚡', claimed: false }
+      { id: 'pulse', type: 'pulse', title: 'Déclencher 1 Pulse Burst', detail: 'Atteins la charge maximale', target: 1, progress: 0, reward: 90, icon: '\u26A1\uFE0E', claimed: false }
     ];
   }
 
@@ -605,7 +603,7 @@
     document.documentElement.style.setProperty('--skin-contrast', skin.contrast);
     const lifted = profile.ui !== 'dark' && board.id === 'night';
     document.documentElement.dataset.ui = profile.ui === 'dark' ? 'dark' : 'soft';
-    document.documentElement.dataset.motion = profile.reduceMotion ? 'reduced' : 'full';
+    document.documentElement.dataset.motion = (profile.reduceMotion || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) ? 'reduced' : 'full';
     document.documentElement.dataset.tip = profile.showTip ? 'on' : 'off';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', profile.ui === 'dark' ? '#080b18' : '#2a3c63');
     document.documentElement.style.setProperty('--board-shell', lifted ? '#2f4a7a' : board.shell);
@@ -631,6 +629,7 @@
     renderTrophies();
     bindEvents();
     initNative();
+    try { onlineInit(); } catch (_) { /* l'online ne doit jamais bloquer le lancement */ }
     setTimeout(() => $('#boot-screen')?.classList.add('done'), 650);
   }
 
@@ -731,6 +730,9 @@
       case 'toggle-theme': profile.ui = profile.ui === 'dark' ? 'soft' : 'dark'; saveProfile(); applyTheme(); renderHome(); renderSettings(); showToast(profile.ui === 'dark' ? 'Fond sombre' : 'Fond clair'); break;
       case 'toggle-haptics': profile.haptics = profile.haptics === false; saveProfile(); renderHome(); renderSettings(); showToast(profile.haptics ? 'Vibrations activées' : 'Vibrations coupées'); if (profile.haptics) vibrate(20); break;
       case 'resume-run': resumeRun(); break;
+      case 'revive-accept': reviveAccept(); break;
+      case 'revive-decline': state.reviveOffer = false; closeModal(); endGame(); break;
+      case 'open-about': openAbout(); break;
       case 'install-app': installApp(); break;
       case 'open-tutorial': openTutorial(0); break;
       case 'tutorial-next': openTutorial(Number(event.target.closest('[data-page]')?.dataset.page || 0) + 1); break;
@@ -744,6 +746,9 @@
       case 'import-save': $('#import-file')?.click(); break;
       case 'reset-classic': case 'reset-shapes': case 'reset-all': askReset(action.slice(6)); break;
       case 'confirm-reset': doReset(event.target.closest('[data-scope]')?.dataset.scope); break;
+      case 'lb-edit-name': playSfx('button'); startNameEdit(); break;
+      case 'lb-cancel-name': playSfx('button'); cancelNameEdit(); break;
+      case 'lb-retry': playSfx('button'); loadLeaderboard(); break;
       case 'claim-daily': claimDaily(); break;
       case 'claim-mission': claimMission(event.target.closest('[data-mission-id]')?.dataset.missionId); break;
       case 'buy-item': buyItem(event.target.closest('[data-item]')?.dataset.category, event.target.closest('[data-item]')?.dataset.item); break;
@@ -1240,7 +1245,7 @@
   const BOOSTER_DEFS = [
     { id: 'hammer', label: 'Éclateur', short: 'Retirer 1 carré', active: 'Touche un carré', icon: '⌁' },
     { id: 'reroll', label: 'Recomp.', short: 'Changer la main', active: 'En cours…', icon: '⟳' },
-    { id: 'pulse-core', label: 'Surcharge', short: 'Charger Pulse', active: 'Prêt au prochain clear', icon: '⚡' },
+    { id: 'pulse-core', label: 'Surcharge', short: 'Charger Pulse', active: 'Prêt au prochain clear', icon: '\u26A1\uFE0E' },
     { id: 'scanner', label: 'Scanner', short: 'Révéler un coup', active: 'Analyse…', icon: '⌕' },
     { id: 'line-breaker', label: 'Lame', short: 'Ouvrir une ligne', active: 'Touche une ligne', icon: '╾' }
   ];
@@ -1422,6 +1427,7 @@
 
   function startNewGame(mode = state.mode, boardId = null) {
     cancelDrag();
+    state.reviveOffer = false;
     closeModal();
     state.mode = mode === 'shapes' ? 'shapes' : 'classic';
     profile.run = null;
@@ -1439,7 +1445,7 @@
     $('#high-score-feedback')?.setAttribute('aria-hidden', 'true');
     $('#clear-feedback')?.classList.remove('show');
     $('#clear-feedback')?.setAttribute('aria-hidden', 'true');
-    state.screen = 'game'; state.board = createEmptyBoard(); state.turn = 0; state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.recordAnnounced = false; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.clearVisualPending = false; state.clearVisualToken += 1; state.gameActive = true; state.paused = false; state.bestAtStart = getBest(); state.pendingMastery = null; state.masteryNext = null; state.masteryReward = null;
+    state.screen = 'game'; state.board = createEmptyBoard(); state.turn = 0; state.queue = generateQueue(); state.score = 0; state.lines = 0; state.combo = 0; state.recordAnnounced = false; state.bestComboInGame = 0; state.charge = 0; state.pulseBursts = 0; state.activeBooster = null; state.selectedPiece = null; state.resolving = false; state.clearVisualPending = false; state.clearVisualToken += 1; state.gameActive = true; state.paused = false; state.bestAtStart = getBest(); state.revived = false; state.reviveOffer = false; state.pendingMastery = null; state.masteryNext = null; state.masteryReward = null;
     showScreen('game'); renderBoard(); renderTray(); renderHud(); renderBoosters(); animateTrayArrival(); animateBoosterArrival(); $('#game-message').textContent = 'Choisis un fragment et fais-le glisser.'; vibrate(8); playSfx('start');
     if (state.mode === 'classic' && !profile.tutorialDone) openTutorial(0);
     if (state.mode === 'shapes') {
@@ -1464,6 +1470,7 @@
     if (route === 'shapes') renderShapes();
     if (route === 'settings') renderSettings();
     if (route === 'trophies') renderTrophies();
+    if (route === 'leaderboard') openLeaderboard();
     keepAwake(route === 'game' && state.gameActive);
     if (route === 'progression') {
       renderProgression();
@@ -1596,7 +1603,7 @@
     state.resolving = false;
     renderTray(); renderHud();
     const playable = state.queue.some(piece => piece && canAnyPlace(piece));
-    if (!playable) endGame();
+    if (!playable) endOrRevive();
     else { $('#game-message').textContent = state.combo > 1 ? `Le rythme est lancé : combo ×${state.combo}.` : 'À toi de jouer. Trouve le prochain espace.'; saveProfile(); }
   }
 
@@ -1611,7 +1618,7 @@
     if (state.queue.every(piece => !piece)) { state.queue = generateQueue(); }
     state.resolving = false; state.clearVisualPending = false; renderBoard(); renderTray(); renderHud();
     const playable = state.queue.some(piece => piece && canAnyPlace(piece));
-    if (!playable) endGame();
+    if (!playable) endOrRevive();
     else { $('#game-message').textContent = state.combo > 1 ? `Le rythme est lancé : combo ×${state.combo}.` : 'À toi de jouer. Trouve le prochain espace.'; saveProfile(); }
   }
 
@@ -1634,6 +1641,7 @@
     const levels = addXp(xpEarned);
     checkAchievements();
     saveProfile(); renderHome(); renderMissions(); renderStats(); renderHud(); renderShapes(); renderTrophies();
+    if (state.mode === 'classic') onlineAfterClassicGame();
     if (options.silent) { showToast(`Partie enregistrée · +${reward} ◆ · +${xpEarned} XP`); return; }
     const masteryNow = state.mode === 'shapes' && state.pendingMastery;
     if (!masteryNow) {
@@ -1754,7 +1762,7 @@
       const milestone = Boolean(reward.milestone || level % 5 === 0);
       const statusClass = claimed ? 'is-claimed' : unlocked ? 'is-available' : 'is-locked';
       const stateLabel = claimed ? '✓ RÉCUPÉRÉE' : current ? 'NIVEAU ACTUEL' : unlocked ? 'RÉCOMPENSE DISPONIBLE' : 'VERROUILLÉ';
-      const action = claimed ? '<span class="progression-claimed">✓ RÉCUPÉRÉE</span>' : unlocked ? `<button class="progression-claim" data-action="claim-progression" data-level="${level}">RÉCUPÉRER</button>` : `<span class="progression-locked">🔒 À venir</span>`;
+      const action = claimed ? '<span class="progression-claimed">RÉCUPÉRÉE</span>' : unlocked ? `<button class="progression-claim" data-action="claim-progression" data-level="${level}">RÉCUPÉRER</button>` : `<span class="progression-locked">À venir</span>`;
       return `<article class="progression-node ${statusClass}${current ? ' is-current' : ''}${milestone ? ' is-milestone' : ''}" data-progression-level="${level}"><div class="progression-rail"><span class="progression-dot">${claimed ? '✓' : milestone ? '★' : level}</span></div><div class="progression-card"><div class="progression-card-top"><span class="progression-level">NIVEAU ${level}</span><span class="progression-state">${stateLabel}</span></div><div class="progression-reward"><span class="progression-reward-icon">${reward.icon || '◆'}</span><div><strong>${progressionRewardLabel(reward)}</strong><small>${reward.title || progressionRewardDetail(reward)}${milestone ? ' · MILESTONE' : ''}</small></div></div>${action}</div></article>`;
     }).join('');
     target.innerHTML = `<article class="progression-overview"><div class="progression-overview-top"><div><span class="eyebrow accent">ROUTE DE PROGRESSION</span><h2>Niveau ${profile.level}</h2><p>${formatNumber(profile.xp)} / ${formatNumber(nextXp)} XP avant le niveau ${profile.level + 1}</p></div><button class="progression-center" data-action="progression-current">MON NIVEAU</button></div><div class="progression-xp"><span style="width:${xpRatio}%"></span></div><div class="progression-next"><span>${available ? `${available} récompense${available > 1 ? 's' : ''} disponible${available > 1 ? 's' : ''}` : 'PROCHAINE RÉCOMPENSE'}</span><strong>NIVEAU ${nextReward.level} · ${progressionRewardDetail(nextReward)}</strong></div></article><div class="progression-track">${nodes}</div>`;
@@ -1781,8 +1789,8 @@
   function renderHome() {
     const next = xpForNextLevel(profile.level); const ratio = clamp(profile.xp / next * 100, 0, 100);
     $('#home-level').textContent = profile.level; $('#home-coins').textContent = formatNumber(profile.coins); $('#home-best').textContent = formatNumber(profile.best); $('#home-xp-label').textContent = `${formatNumber(profile.xp)} / ${formatNumber(next)} XP`; $('#home-xp-fill').style.width = `${ratio}%`;
-    $('#sound-icon').textContent = profile.sound ? '◖' : '◌';
-    $('#music-icon').textContent = profile.music ? '♫' : '·';
+    $('#sound-icon').innerHTML = profile.sound ? '<svg class="ico" aria-hidden="true"><use href="#i-volume"/></svg>' : '<svg class="ico" aria-hidden="true"><use href="#i-volume-off"/></svg>';
+    $('#music-icon').innerHTML = profile.music ? '<svg class="ico" aria-hidden="true"><use href="#i-music"/></svg>' : '<svg class="ico" aria-hidden="true"><use href="#i-music-off"/></svg>';
     $('#sound-label').textContent = profile.sound ? 'ON' : 'OFF';
     $('#music-label').textContent = profile.music ? 'ON' : 'OFF';
     $$('[data-action="toggle-sound"]').forEach(button => button.setAttribute('aria-pressed', String(profile.sound)));
@@ -1795,7 +1803,7 @@
     $('#home-progression-next').textContent = progressionLabel;
     const available = profile.missions.filter(m => m.progress >= m.target && !m.claimed).length; $('#home-mission-count').textContent = available ? `${available} à réclamer` : 'Défis du jour';
     const mission = profile.missions.find(m => !m.claimed) || profile.missions[0];
-    renderShapesHome(); renderHomeExtras(); renderTrophyCount();
+    renderShapesHome(); renderHomeExtras(); renderTrophyCount(); renderLeaderboardTeaser();
     if (mission) { $('#home-mission-title').textContent = mission.title; $('#home-mission-fill').style.width = `${clamp(mission.progress / mission.target * 100, 0, 100)}%`; }
   }
 
@@ -1979,7 +1987,7 @@
 
   function renderThemeShop() {
     const complete = THEMES.filter(theme => themeInfo(theme).complete).length;
-    return `<section class="shop-hero shop-hero-themes"><div class="shop-hero-icon">❖</div><div class="shop-hero-copy"><span class="eyebrow accent">COLLECTIONS ASSORTIES</span><h2>Un look. Un tap.</h2><p>Fragments, plateau et impulsion pensés ensemble, −25% par rapport à l’unité.</p></div><div class="shop-hero-stat"><strong>${complete}/${THEMES.length}</strong><small>complets</small></div></section><div class="theme-list">${THEMES.map(themeCardHTML).join('')}</div>`;
+    return `<section class="shop-hero shop-hero-themes"><div class="shop-hero-icon">❖</div><div class="shop-hero-copy"><span class="eyebrow accent">COLLECTIONS ASSORTIES</span><h2>Thèmes assortis</h2><p>Fragments, plateau et impulsion pensés ensemble, −25% par rapport à l’unité.</p></div><div class="shop-hero-stat"><strong>${complete}/${THEMES.length}</strong><small>complets</small></div></section><div class="theme-list">${THEMES.map(themeCardHTML).join('')}</div>`;
   }
 
   /* ----- Aperçu en jeu (fenêtre) ----- */
@@ -2053,9 +2061,9 @@
   }
 
   const SHOP_COPY = {
-    skins: { kicker: 'FORME DES BLOCS', title: 'Change la matière.', detail: 'Lave, cristal, néon, or : chaque skin redessine tous tes blocs, sur la grille comme dans ta main.', icon: '✦' },
-    boards: { kicker: 'ESPACE DE JEU', title: 'Choisis ton terrain.', detail: 'Des matières et des ambiances qui transforment la grille, sans gêner la lecture.', icon: '▦' },
-    effects: { kicker: 'SIGNATURE DE COMBO', title: 'Fais sentir tes coups.', detail: 'Touche une carte pour voir l’effet jouer sur une vraie ligne.', icon: '✺' }
+    skins: { kicker: 'FORME DES BLOCS', title: 'Matières des blocs', detail: 'Lave, cristal, néon, or : chaque skin redessine tous tes blocs, sur la grille comme dans ta main.', icon: '✦' },
+    boards: { kicker: 'ESPACE DE JEU', title: 'Plateaux', detail: 'Des matières et des ambiances qui transforment la grille, sans gêner la lecture.', icon: '▦' },
+    effects: { kicker: 'SIGNATURE DE COMBO', title: 'Effets de combo', detail: 'Touche une carte pour voir l’effet jouer sur une vraie ligne.', icon: '✺' }
   };
 
   function renderShop() {
@@ -2086,7 +2094,7 @@
       return `<article class="catalog-card pack-card" data-pack-id="${pack.id}"><div class="catalog-preview pack-preview"><span>${pack.icon}</span><em>${pack.badge || 'PACK'}</em><b class="pack-question">?</b></div><div class="pack-kicker">${pack.badge || 'PACK DE BOOSTERS'} <b>${pack.savings || ''}</b></div><h3>${pack.name}</h3><p>${pack.description}</p><div class="pack-mystery"><span>?</span><div><strong>CONTENU MYSTÈRE</strong><small>${rewardCount} bonus garantis · révélés à l’ouverture</small></div></div><div class="pack-value"><span>VALEUR RUN</span><strong>${pack.savings || 'STOCK'}</strong></div><button class="item-action buy" data-action="buy-pack">◆ ${pack.price}</button></article>`;
     }).join('');
     const boosters = CATALOG.boosters.map(item => renderBoosterShopCard(item)).join('');
-    return `<div class="booster-shop"><section class="shop-hero shop-hero-boosters"><div class="shop-hero-icon">⚡</div><div class="shop-hero-copy"><span class="eyebrow accent">OUTILS DE RUN</span><h2>Achète un vrai avantage.</h2><p>Chaque bonus a un moment précis où il peut sauver ta grille. Pas de décoration inutile.</p></div><div class="shop-hero-stat"><strong>${Object.values(profile.inventory).reduce((sum, count) => sum + (Number(count) || 0), 0)}</strong><small>en stock</small></div></section><div class="booster-shop-intro"><div class="booster-shop-icon">◎</div><div><span class="eyebrow accent">CONSOMMABLES</span><strong>Choisis ton style de secours.</strong><small>Précision, information, tempo ou ouverture : les packs combinent des usages différents.</small></div></div><div class="shop-section-label">PACKS AVANTAGEUX</div><div class="catalog-grid pack-grid">${packs}</div><div class="shop-section-label">À L'UNITÉ · CHOISIS TON OUTIL</div><div class="catalog-grid booster-grid">${boosters}</div></div>`;
+    return `<div class="booster-shop"><section class="shop-hero shop-hero-boosters"><div class="shop-hero-icon">\u26A1\uFE0E</div><div class="shop-hero-copy"><span class="eyebrow accent">OUTILS DE RUN</span><h2>Bonus de partie</h2><p>Chaque bonus a un moment précis où il peut sauver ta grille. Pas de décoration inutile.</p></div><div class="shop-hero-stat"><strong>${Object.values(profile.inventory).reduce((sum, count) => sum + (Number(count) || 0), 0)}</strong><small>en stock</small></div></section><div class="booster-shop-intro"><div class="booster-shop-icon">◎</div><div><span class="eyebrow accent">CONSOMMABLES</span><strong>Choisis ton style de secours.</strong><small>Précision, information, tempo ou ouverture : les packs combinent des usages différents.</small></div></div><div class="shop-section-label">PACKS AVANTAGEUX</div><div class="catalog-grid pack-grid">${packs}</div><div class="shop-section-label">À L'UNITÉ · CHOISIS TON OUTIL</div><div class="catalog-grid booster-grid">${boosters}</div></div>`;
   }
 
   function renderBoosterShopCard(item) {
@@ -2411,7 +2419,7 @@
 
   function renderStats() {
     const next = xpForNextLevel(profile.level); const ratio = clamp(profile.xp / next * 100, 0, 100); const stats = profile.stats;
-    $('#stats-content').innerHTML = `<article class="stats-level-card"><div class="stats-level-top"><div><span class="eyebrow accent">NIVEAU ACTUEL</span><h2>Architecte de pulse</h2></div><strong>${profile.level}</strong></div><p>${formatNumber(profile.xp)} / ${formatNumber(next)} XP avant le niveau ${profile.level + 1}</p><div class="xp-track"><span style="width:${ratio}%"></span></div></article><div class="section-heading"><h2>Classic</h2><span class="section-line"></span></div><div class="stats-grid"><article class="stat-box"><span>Meilleur score</span><strong>${formatNumber(profile.best)}</strong><em>record personnel</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(stats.games)}</strong><em>tentatives</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(stats.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(stats.bestCombo)}</strong><em>chaîne maximale</em></article><article class="stat-box"><span>Score cumulé</span><strong>${formatNumber(stats.totalScore)}</strong><em>toutes parties</em></article><article class="stat-box"><span>Fragments posés</span><strong>${formatNumber(stats.piecesPlaced)}</strong><em>patience & précision</em></article><article class="stat-box"><span>Pulse Bursts</span><strong>${formatNumber(stats.pulseBursts)}</strong><em>surcharges parfaites</em></article><article class="stat-box"><span>Bonus utilisés</span><strong>${formatNumber(stats.boostersUsed)}</strong><em>coups de secours</em></article></div>${shapesStatsHTML()}<div class="tip-card">Les scores, objets et missions sont enregistrés automatiquement sur cet appareil grâce à <strong>localStorage</strong>. Ferme le jeu sans crainte : ta progression reste là.</div>`;
+    $('#stats-content').innerHTML = `<article class="stats-level-card"><div class="stats-level-top"><div><span class="eyebrow accent">NIVEAU ACTUEL</span><h2>Récompenses</h2></div><strong>${profile.level}</strong></div><p>${formatNumber(profile.xp)} / ${formatNumber(next)} XP avant le niveau ${profile.level + 1}</p><div class="xp-track"><span style="width:${ratio}%"></span></div></article><div class="section-heading"><h2>Classic</h2><span class="section-line"></span></div><div class="stats-grid"><article class="stat-box"><span>Meilleur score</span><strong>${formatNumber(profile.best)}</strong><em>record personnel</em></article><article class="stat-box"><span>Parties jouées</span><strong>${formatNumber(stats.games)}</strong><em>tentatives</em></article><article class="stat-box"><span>Lignes dissoutes</span><strong>${formatNumber(stats.totalLines)}</strong><em>total cumulé</em></article><article class="stat-box"><span>Meilleur combo</span><strong>×${formatNumber(stats.bestCombo)}</strong><em>chaîne maximale</em></article><article class="stat-box"><span>Score cumulé</span><strong>${formatNumber(stats.totalScore)}</strong><em>toutes parties</em></article><article class="stat-box"><span>Fragments posés</span><strong>${formatNumber(stats.piecesPlaced)}</strong><em>patience & précision</em></article><article class="stat-box"><span>Pulse Bursts</span><strong>${formatNumber(stats.pulseBursts)}</strong><em>surcharges parfaites</em></article><article class="stat-box"><span>Bonus utilisés</span><strong>${formatNumber(stats.boostersUsed)}</strong><em>coups de secours</em></article></div>${shapesStatsHTML()}<div class="tip-card">Les scores, objets et missions sont enregistrés automatiquement sur cet appareil grâce à <strong>localStorage</strong>. Ferme le jeu sans crainte : ta progression reste là.</div>`;
   }
 
   function giveHint(options = {}) {
@@ -2436,7 +2444,7 @@
   function openPauseModal() {
     if (!state.gameActive) { showScreen('home'); return; }
     state.paused = true;
-    openModal(`<div class="pause-icon">Ⅱ</div><span class="modal-kicker">PARTIE EN PAUSE</span><h2>Garde ton rythme.</h2><p>La partie est en sécurité. Reviens quand tu veux continuer à construire ta grille.</p><div class="modal-actions"><button class="secondary" data-action="go-home">ACCUEIL</button><button class="secondary" data-action="restart">RECOMMENCER</button><button class="primary" data-action="resume">CONTINUER</button></div>`);
+    openModal(`<div class="pause-icon">Ⅱ</div><span class="modal-kicker">PARTIE EN PAUSE</span><h2>Kits de bonus</h2><p>La partie est en sécurité. Reviens quand tu veux continuer à construire ta grille.</p><div class="modal-actions"><button class="secondary" data-action="go-home">ACCUEIL</button><button class="secondary" data-action="restart">RECOMMENCER</button><button class="primary" data-action="resume">CONTINUER</button></div>`);
   }
 
   function openEndModal(reward, xpEarned, levels, levelBefore, isNewRecord, previousBest) {
@@ -2465,6 +2473,8 @@
     $('#modal-backdrop').classList.remove('open');
     $('#modal-backdrop').setAttribute('aria-hidden', 'true');
     if (state.gameActive) state.paused = false;
+    // Fermer l'offre de reprise sans choisir (retour, touche Échap, clic à côté) = terminer la partie.
+    if (state.reviveOffer) { state.reviveOffer = false; endGame(); }
   }
 
   function triggerClearEffect(cells, pulseBurst = false) {
@@ -2756,6 +2766,14 @@
     } catch (_) { /* audio facultatif */ }
   }
 
+  // Compatibilité : utilisé par la cinématique d'ouverture des packs (sons « tonals » simples).
+  function playTone(freq, duration, o = {}) {
+    if (!profile.sound || profile.volume <= 0) return;
+    const context = getAudioContext(); if (!context || context.state === 'suspended') return;
+    const harsh = o.type === 'square' || o.type === 'sawtooth';
+    voice(freq, context.currentTime + .005, duration, { type: o.type || 'sine', gain: (o.gain || .04) * 1.1, to: o.to, attack: .004, reverb: .25, filter: harsh ? { freq: 2400 } : undefined });
+  }
+
   function playSfx(name, level = 1) {
     if (!profile.sound || profile.volume <= 0) return;
     const context = getAudioContext(); if (!context || context.state === 'suspended') return;
@@ -3013,7 +3031,7 @@
     const actions = live
       ? `<button class="secondary" data-action="close-modal">CONTINUER</button>${next ? `<button class="primary" data-action="shapes-next">DÉCOUVRIR →</button>` : `<button class="primary" data-action="close-modal">SUPER !</button>`}`
       : `<button class="secondary" data-action="go-home">ACCUEIL</button><button class="secondary" data-action="restart">REJOUER</button>${next ? `<button class="primary" data-action="shapes-next">SUIVANT →</button>` : ''}`;
-    openModal(`<span class="modal-kicker record-kicker">🎉 PLATEAU MAÎTRISÉ !</span><h2>${def.name} ✓</h2>${stage}${recap}<div class="reward-row"><div>◆ ${reward.coins}<span>PulseCoins</span></div><div>✦ ${reward.xp}<span>XP gagnés</span></div></div>${reveal}<div class="modal-actions">${actions}</div>`, 'mastery-modal');
+    openModal(`<span class="modal-kicker record-kicker">PLATEAU MAÎTRISÉ</span><h2>${def.name} ✓</h2>${stage}${recap}<div class="reward-row"><div>◆ ${reward.coins}<span>PulseCoins</span></div><div>✦ ${reward.xp}<span>XP gagnés</span></div></div>${reveal}<div class="modal-actions">${actions}</div>`, 'mastery-modal');
     setTimeout(() => $('#modal-card .morph-stage')?.classList.add('go'), 750);
     renderShapesHome();
     playSfx('record'); setTimeout(() => playSfx('morph'), 700); setTimeout(() => playSfx('unlock'), 1500);
@@ -3066,10 +3084,10 @@
       const unlocked = isShapeUnlocked(def.id);
       const pct = shapeMasteryPct(def, prog);
       const status = prog.mastered ? 'mastered' : !unlocked ? 'locked' : def.id === suggested ? 'current' : 'open';
-      const badge = prog.mastered ? '✓ MAÎTRISÉ' : !unlocked ? '🔒 VERROUILLÉ' : def.id === suggested ? 'EN COURS' : 'DISPONIBLE';
+      const badge = prog.mastered ? '✓ MAÎTRISÉ' : !unlocked ? 'VERROUILLÉ' : def.id === suggested ? 'EN COURS' : 'DISPONIBLE';
       const previous = SHAPE_BOARDS[index - 1];
       const body = unlocked
-        ? `<p class="world-rule">${def.rule}</p>${objectivesHTML(def, prog)}<div class="world-actions"><button class="primary-button" data-action="play-shapes" data-shape-id="${def.id}"><span>${prog.mastered ? 'REJOUER' : 'JOUER'}</span><b>→</b></button></div>`
+        ? `<p class="world-rule">${def.rule}</p>${objectivesHTML(def, prog)}<div class="world-actions"><button class="primary-button" data-action="play-shapes" data-shape-id="${def.id}"><span>${prog.mastered ? 'REJOUER' : 'JOUER'}</span><b><svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></b></button></div>`
         : `<p class="world-lock">Maîtrise le plateau <b>${previous.name}</b> (100 %) pour débloquer cette forme.</p><p class="world-rule faint">${def.specialLabel ? `Nouveauté : ${def.specialLabel.toLowerCase()}.` : def.tagline}</p>`;
       return `<article class="world-card ${status}" style="--world-accent:${def.accent}" data-shape-id="${def.id}"><div class="world-head">${shapeMiniHTML(def)}<div class="world-title"><span class="eyebrow">PLATEAU ${index + 1} · ${def.tagline.toUpperCase()}</span><strong>${def.name}</strong></div><span class="world-badge">${badge}</span></div><div class="world-progress"><div class="mini-progress"><span style="width:${pct}%"></span></div><b>${pct} %</b></div>${body}</article>`;
     });
@@ -3172,10 +3190,12 @@
   // Tout ce qui dépend du profil est redessiné d'un coup (import ou réinitialisation).
   function refreshAll() {
     cancelDrag(); closeModal();
+    state.reviveOffer = false;
     state.gameActive = false; state.paused = false; state.resolving = false; state.activeBooster = null; state.selectedPiece = null;
     applyTheme(); renderHome(); renderMissions(); renderShop(); renderCollection(); renderStats(); renderProgression(); renderShapes(); renderSettings(); renderTrophies();
     updateMusicVolume();
     if (profile.music) startMusic(); else stopMusic();
+    try { onlineSyncSoon(800); } catch (_) { /* rien */ }
   }
 
   function saveText() { return JSON.stringify({ ...profile, run: null, exportedAt: new Date().toISOString(), app: 'pulse-grid', version: APP_VERSION }); }
@@ -3249,29 +3269,29 @@
   const bestScoreAll = () => Math.max(profile.best, ...SHAPE_BOARDS.map(b => profile.shapes.boards[b.id]?.bestScore || 0));
   const masteredCount = () => SHAPE_BOARDS.filter(b => profile.shapes.boards[b.id]?.mastered).length;
   const ACHIEVEMENTS = [
-    { id: 'games-1', icon: '🌱', name: 'Premiers pas', desc: 'Termine 1 partie', target: 1, reward: 30, value: () => totalOf('games') },
-    { id: 'games-10', icon: '🎮', name: 'Habitué', desc: 'Termine 10 parties', target: 10, reward: 60, value: () => totalOf('games') },
-    { id: 'games-50', icon: '🕹️', name: 'Accro', desc: 'Termine 50 parties', target: 50, reward: 200, value: () => totalOf('games') },
-    { id: 'lines-25', icon: '▦', name: 'Premières lignes', desc: 'Dissous 25 lignes', target: 25, reward: 40, value: () => totalOf('totalLines') },
-    { id: 'lines-250', icon: '🧱', name: 'Démolisseur', desc: 'Dissous 250 lignes', target: 250, reward: 120, value: () => totalOf('totalLines') },
-    { id: 'lines-1000', icon: '🏗️', name: 'Architecte', desc: 'Dissous 1 000 lignes', target: 1000, reward: 400, value: () => totalOf('totalLines') },
-    { id: 'combo-3', icon: '🔥', name: 'En chaîne', desc: 'Atteins un combo ×3', target: 3, reward: 50, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
-    { id: 'combo-5', icon: '⚡', name: 'Électrique', desc: 'Atteins un combo ×5', target: 5, reward: 120, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
-    { id: 'combo-8', icon: '🌋', name: 'Inarrêtable', desc: 'Atteins un combo ×8', target: 8, reward: 300, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
-    { id: 'score-2000', icon: '⭐', name: 'Bon départ', desc: 'Score de 2 000 en une partie', target: 2000, reward: 50, value: bestScoreAll },
-    { id: 'score-10000', icon: '🌟', name: 'Virtuose', desc: 'Score de 10 000 en une partie', target: 10000, reward: 200, value: bestScoreAll },
-    { id: 'score-30000', icon: '👑', name: 'Légende', desc: 'Score de 30 000 en une partie', target: 30000, reward: 500, value: bestScoreAll },
-    { id: 'pulse-1', icon: '💥', name: 'Surcharge', desc: 'Déclenche 1 Pulse Burst', target: 1, reward: 50, value: () => totalOf('pulseBursts') },
-    { id: 'pulse-10', icon: '☄️', name: 'Réacteur', desc: 'Déclenche 10 Pulse Bursts', target: 10, reward: 180, value: () => totalOf('pulseBursts') },
-    { id: 'perfect-1', icon: '✨', name: 'Plateau vide', desc: 'Vide entièrement le plateau', target: 1, reward: 100, value: () => totalOf('perfectClears') },
-    { id: 'shape-1', icon: '▭', name: 'Explorateur', desc: 'Maîtrise 1 plateau Shapes', target: 1, reward: 100, value: masteredCount },
-    { id: 'shape-3', icon: '◆', name: 'Géomètre', desc: 'Maîtrise 3 plateaux Shapes', target: 3, reward: 250, value: masteredCount },
-    { id: 'shape-5', icon: '●', name: 'Maître des formes', desc: 'Maîtrise 5 plateaux Shapes', target: 5, reward: 600, value: masteredCount },
-    { id: 'level-5', icon: '📈', name: 'Niveau 5', desc: 'Atteins le niveau 5', target: 5, reward: 80, value: () => profile.level },
-    { id: 'level-15', icon: '🚀', name: 'Niveau 15', desc: 'Atteins le niveau 15', target: 15, reward: 300, value: () => profile.level },
-    { id: 'streak-3', icon: '📅', name: 'Fidèle', desc: '3 jours de suite', target: 3, reward: 60, value: () => profile.daily.streak },
-    { id: 'streak-7', icon: '🏅', name: 'Semaine parfaite', desc: '7 jours de suite', target: 7, reward: 200, value: () => profile.daily.streak },
-    { id: 'booster-10', icon: '🧰', name: 'Stratège', desc: 'Utilise 10 bonus', target: 10, reward: 70, value: () => totalOf('boostersUsed') }
+    { id: 'games-1', icon: 'play', name: 'Premiers pas', desc: 'Termine 1 partie', target: 1, reward: 30, value: () => totalOf('games') },
+    { id: 'games-10', icon: 'play', name: 'Habitué', desc: 'Termine 10 parties', target: 10, reward: 60, value: () => totalOf('games') },
+    { id: 'games-50', icon: 'play', name: 'Accro', desc: 'Termine 50 parties', target: 50, reward: 200, value: () => totalOf('games') },
+    { id: 'lines-25', icon: 'rows', name: 'Premières lignes', desc: 'Dissous 25 lignes', target: 25, reward: 40, value: () => totalOf('totalLines') },
+    { id: 'lines-250', icon: 'rows', name: 'Démolisseur', desc: 'Dissous 250 lignes', target: 250, reward: 120, value: () => totalOf('totalLines') },
+    { id: 'lines-1000', icon: 'rows', name: 'Architecte', desc: 'Dissous 1 000 lignes', target: 1000, reward: 400, value: () => totalOf('totalLines') },
+    { id: 'combo-3', icon: 'flame', name: 'En chaîne', desc: 'Atteins un combo ×3', target: 3, reward: 50, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
+    { id: 'combo-5', icon: 'bolt', name: 'Électrique', desc: 'Atteins un combo ×5', target: 5, reward: 120, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
+    { id: 'combo-8', icon: 'flame', name: 'Inarrêtable', desc: 'Atteins un combo ×8', target: 8, reward: 300, value: () => Math.max(profile.stats.bestCombo, profile.shapes.stats.bestCombo) },
+    { id: 'score-2000', icon: 'star', name: 'Bon départ', desc: 'Score de 2 000 en une partie', target: 2000, reward: 50, value: bestScoreAll },
+    { id: 'score-10000', icon: 'star', name: 'Virtuose', desc: 'Score de 10 000 en une partie', target: 10000, reward: 200, value: bestScoreAll },
+    { id: 'score-30000', icon: 'crown', name: 'Légende', desc: 'Score de 30 000 en une partie', target: 30000, reward: 500, value: bestScoreAll },
+    { id: 'pulse-1', icon: 'bolt', name: 'Surcharge', desc: 'Déclenche 1 Pulse Burst', target: 1, reward: 50, value: () => totalOf('pulseBursts') },
+    { id: 'pulse-10', icon: 'bolt', name: 'Réacteur', desc: 'Déclenche 10 Pulse Bursts', target: 10, reward: 180, value: () => totalOf('pulseBursts') },
+    { id: 'perfect-1', icon: 'target', name: 'Plateau vide', desc: 'Vide entièrement le plateau', target: 1, reward: 100, value: () => totalOf('perfectClears') },
+    { id: 'shape-1', icon: 'shapes', name: 'Explorateur', desc: 'Maîtrise 1 plateau Shapes', target: 1, reward: 100, value: masteredCount },
+    { id: 'shape-3', icon: 'shapes', name: 'Géomètre', desc: 'Maîtrise 3 plateaux Shapes', target: 3, reward: 250, value: masteredCount },
+    { id: 'shape-5', icon: 'shapes', name: 'Maître des formes', desc: 'Maîtrise 5 plateaux Shapes', target: 5, reward: 600, value: masteredCount },
+    { id: 'level-5', icon: 'trend', name: 'Niveau 5', desc: 'Atteins le niveau 5', target: 5, reward: 80, value: () => profile.level },
+    { id: 'level-15', icon: 'trend', name: 'Niveau 15', desc: 'Atteins le niveau 15', target: 15, reward: 300, value: () => profile.level },
+    { id: 'streak-3', icon: 'calendar', name: 'Fidèle', desc: '3 jours de suite', target: 3, reward: 60, value: () => profile.daily.streak },
+    { id: 'streak-7', icon: 'calendar', name: 'Semaine parfaite', desc: '7 jours de suite', target: 7, reward: 200, value: () => profile.daily.streak },
+    { id: 'booster-10', icon: 'box', name: 'Stratège', desc: 'Utilise 10 bonus', target: 10, reward: 70, value: () => totalOf('boostersUsed') }
   ];
   const achValue = id => { const a = ACHIEVEMENTS.find(item => item.id === id); return a ? a.value() : 0; };
   let trophyQueue = []; let trophyTimer = null;
@@ -3291,7 +3311,7 @@
     if (trophyTimer || !trophyQueue.length) return;
     const a = trophyQueue.shift();
     trophyTimer = setTimeout(() => {
-      showToast(`🏆 ${a.name} · +${a.reward} ◆`); playSfx('unlock'); vibrate([16, 10, 28]);
+      showToast(`Trophée débloqué : ${a.name} · +${a.reward} ◆`); playSfx('unlock'); vibrate([16, 10, 28]);
       if (state.screen === 'trophies') renderTrophies();
       trophyTimer = setTimeout(() => { trophyTimer = null; pumpTrophyQueue(); }, 2600);
     }, 900);
@@ -3307,7 +3327,7 @@
     root.innerHTML = `<article class="shapes-intro"><span class="eyebrow accent">COLLECTION</span><h2>${done} / ${ACHIEVEMENTS.length} trophées</h2><p>Chaque trophée débloqué rapporte des PulseCoins automatiquement.</p><div class="mini-progress"><span style="width:${pct}%"></span></div></article><div class="trophy-list">${
       sorted.map(a => {
         const got = Boolean(profile.achievements[a.id]); const v = Math.min(a.value(), a.target);
-        return `<article class="trophy-card${got ? ' got' : ''}"><div class="trophy-icon">${a.icon}</div><div class="trophy-main"><strong>${a.name}</strong><small>${a.desc}</small>${got ? '' : `<div class="mini-progress"><span style="width:${v / a.target * 100}%"></span></div>`}</div><div class="trophy-reward">${got ? '✓' : `◆ ${a.reward}`}</div></article>`;
+        return `<article class="trophy-card${got ? ' got' : ''}"><div class="trophy-icon"><svg class="ico" aria-hidden="true"><use href="#i-${a.icon}"/></svg></div><div class="trophy-main"><strong>${a.name}</strong><small>${a.desc}</small>${got ? '' : `<div class="mini-progress"><span style="width:${v / a.target * 100}%"></span></div>`}</div><div class="trophy-reward">${got ? '✓' : `◆ ${a.reward}`}</div></article>`;
       }).join('')}</div>`;
   }
 
@@ -3412,9 +3432,64 @@
     renderInstall();
   }
 
+  /* =====================================================================
+     À propos, garde-fous
+     ===================================================================== */
+  function openAbout() {
+    openModal(`<span class="modal-kicker">PULSE GRID · VERSION ${APP_VERSION}</span><h2>Confidentialité</h2><p>Pulse Grid n\u2019affiche aucune publicité et ne contient aucun traceur. Ta progression est enregistrée sur cet appareil (stockage local) ; tu peux l\u2019exporter ou l\u2019effacer à tout moment dans les Paramètres.</p><p>Seul le classement mondial utilise Internet : si tu choisis un pseudo, celui-ci, un identifiant aléatoire et ton meilleur score Classic sont envoyés à notre serveur et visibles par les autres joueurs. N\u2019utilise pas ton vrai nom.</p><p>Le jeu fonctionne hors ligne ; le classement attend simplement que la connexion revienne. Les achats se font avec la monnaie du jeu (PulseCoins), qui n\u2019a aucune valeur réelle.</p><div class="modal-actions"><button class="primary" data-action="close-modal">FERMER</button></div>`);
+  }
+  // Une erreur isolée ne doit jamais figer l'écran : on prévient et la partie continue.
+  let lastErrorToast = 0;
+  function reportError() {
+    const now = Date.now();
+    if (now - lastErrorToast > 8000) { lastErrorToast = now; try { showToast('Un petit souci est survenu. Ta progression est sauvegardée.'); } catch (_) { /* rien */ } }
+  }
+  window.addEventListener('error', reportError);
+  window.addEventListener('unhandledrejection', reportError);
+  setTimeout(() => $('#boot-screen')?.classList.add('done'), 6000);
+
+  /* =====================================================================
+     Reprise après blocage : une seule fois par partie, contre des PulseCoins
+     ===================================================================== */
+  const REVIVE_COST = 150;
+  function endOrRevive() {
+    if (!state.revived && state.turn >= 6 && profile.coins >= REVIVE_COST) offerRevive(); else endGame();
+  }
+  function offerRevive() {
+    cancelDrag();
+    state.paused = true; state.reviveOffer = true;
+    openModal(`<span class="modal-kicker">PLUS DE PLACE</span><h2>Continuer la partie ?</h2><p>Aucun fragment ne rentre. Pour ${REVIVE_COST} PulseCoins, on libère de la place et tu reçois de nouveaux fragments. Ton score et ton combo en cours sont conservés.</p><div class="reward-row"><div>${formatNumber(state.score)}<span>score actuel</span></div><div>◆ ${formatNumber(profile.coins)}<span>ton solde</span></div></div><div class="modal-actions"><button class="secondary" data-action="revive-decline">TERMINER</button><button class="primary" data-action="revive-accept">CONTINUER · ◆ ${REVIVE_COST}</button></div>`, 'revive-modal');
+    playSfx('gameOver'); vibrate([18, 12, 28]);
+  }
+  // Libère environ 20 % des cases en retirant les lignes les plus remplies, sans points ni progression gratuite.
+  function reviveBoard() {
+    const target = Math.ceil(geo.cellCount * .2);
+    const ranked = geo.lines.map(line => ({ line, filled: line.cells.reduce((sum, [r, c]) => sum + (state.board[r][c] ? 1 : 0), 0) })).sort((a, b) => b.filled - a.filled);
+    const cells = new Set();
+    for (const { line } of ranked) {
+      if (cells.size >= target) break;
+      line.cells.forEach(([r, c]) => { if (state.board[r][c]) cells.add(r * geo.cols + c); });
+    }
+    cells.forEach(key => { state.board[Math.floor(key / geo.cols)][key % geo.cols] = null; });
+    return cells.size;
+  }
+  function reviveAccept() {
+    if (!state.reviveOffer || profile.coins < REVIVE_COST) { state.reviveOffer = false; closeModal(); endGame(); return; }
+    state.reviveOffer = false;
+    profile.coins -= REVIVE_COST; state.revived = true;
+    reviveBoard();
+    state.queue = generateQueue();
+    state.resolving = false; state.combo = 0;
+    closeModal();
+    renderBoard(); renderTray(); renderHud(); animateTrayArrival();
+    $('#game-message').textContent = 'Place libérée. C\u2019est reparti !';
+    saveProfile(); playSfx('booster'); vibrate([14, 10, 24]);
+  }
+
   // Pour les tests automatisés uniquement (aucun effet en production).
   if (typeof window !== 'undefined' && typeof window.__PULSE_EXPOSE__ === 'function') {
     window.__PULSE_EXPOSE__({
+      endOrRevive, reviveAccept, playTone, REVIVE_COST,
       ACHIEVEMENTS, checkAchievements, achValue, openTutorial, finishTutorial, shareScore,
       importSave, doReset, saveText, renderSettings,
       snapshotRun, validRun, resumeRun, dailyStatus, claimDaily, playSfx, startMusic, stopMusic,
@@ -3423,6 +3498,281 @@
       clearCompletedLines, placePiece, startNewGame, endGame, activateBoard, shapeMasteryPct, shapeObjectives, normalizeShapes,
       isShapeUnlocked, trackShapesProgress, loadProfile, createEmptyBoard, calculateClearScore
     });
+  }
+
+  /* =====================================================================
+     ONLINE : pseudo, identifiant joueur, classement mondial Classic (Supabase)
+     ---------------------------------------------------------------------
+     - Seule la clé PUBLIQUE (publishable) est utilisée. Aucune clé secrète.
+     - L'identité en ligne est stockée dans sa propre clé localStorage : elle
+       n'altère pas la sauvegarde du jeu (SAVE_KEY) et survit à une remise à zéro.
+     - Le jeu ne dépend jamais du réseau : toute erreur est rattrapée et le
+       record est simplement renvoyé plus tard.
+     ===================================================================== */
+  const ONLINE = {
+    url: 'https://kowglslveawcaxcngiyf.supabase.co/rest/v1/',
+    key: 'sb_publishable_RTLBBaAri_Up8jmbrqBvqQ_7nWdBENN',
+    table: 'leaderboard',
+    // Noms des colonnes de la table Supabase : à adapter ici si besoin.
+    cols: { id: 'player_id', name: 'username', best: 'classic_best' },
+    storageKey: 'pulse-grid-online-v1',
+    topSize: 100,
+    timeoutMs: 9000,
+    nameMin: 3,
+    nameMax: 16
+  };
+  const ONLINE_BASE = ONLINE.url.replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const esc = value => String(value ?? '').replace(/[&<>"'`]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;', '`': '&#96;' }[ch]));
+
+  function makePlayerId() {
+    try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch (_) { /* repli ci-dessous */ }
+    const bytes = new Uint8Array(16);
+    try { crypto.getRandomValues(bytes); } catch (_) { for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256); }
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  // Pseudo : on retire les caractères invisibles/de contrôle, on compacte les espaces, puis on valide.
+  function cleanName(raw) {
+    return String(raw ?? '').normalize('NFKC')
+      .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, '')
+      .replace(/\s+/g, ' ').trim();
+  }
+  function validateName(raw) {
+    const value = cleanName(raw);
+    const length = Array.from(value).length;
+    if (!value) return { ok: false, value, error: 'Entre un pseudo.' };
+    if (/[<>&"'`\\]/.test(value)) return { ok: false, value, error: 'Caractères interdits : < > & " \' ` \\' };
+    if (length < ONLINE.nameMin) return { ok: false, value, error: `Minimum ${ONLINE.nameMin} caractères.` };
+    if (length > ONLINE.nameMax) return { ok: false, value, error: `Maximum ${ONLINE.nameMax} caractères.` };
+    return { ok: true, value, error: '' };
+  }
+
+  function loadOnline() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(ONLINE.storageKey) || 'null'); } catch (_) { raw = null; }
+    const o = raw && typeof raw === 'object' ? raw : {};
+    const count = value => Math.max(0, Math.floor(Number(value) || 0));
+    const named = validateName(o.name);
+    return {
+      id: typeof o.id === 'string' && UUID_RE.test(o.id) ? o.id.toLowerCase() : makePlayerId(),
+      name: named.ok ? named.value : '',
+      synced: count(o.synced),            // meilleur score connu côté serveur
+      syncedName: typeof o.syncedName === 'string' ? o.syncedName : '',
+      rank: count(o.rank),                // dernier rang connu (affichage hors ligne)
+      rankBest: count(o.rankBest)
+    };
+  }
+  let online = loadOnline();
+  function saveOnline() { try { localStorage.setItem(ONLINE.storageKey, JSON.stringify(online)); } catch (_) { /* stockage indisponible : on continue */ } }
+  saveOnline();
+
+  // ----- Réseau (PostgREST) -----
+  function onlineError(kind, status = 0) { const error = new Error(`online:${kind}:${status}`); error.onlineKind = kind; error.status = status; return error; }
+
+  async function sbRequest(path, { method = 'GET', body = null, prefer = '' } = {}) {
+    if (typeof fetch !== 'function') throw onlineError('network');
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => { try { controller && controller.abort(); } catch (_) { /* rien */ } }, ONLINE.timeoutMs);
+    try {
+      const headers = { apikey: ONLINE.key, Accept: 'application/json' };
+      if (body) headers['Content-Type'] = 'application/json';
+      if (prefer) headers.Prefer = prefer;
+      const response = await fetch(`${ONLINE_BASE}/rest/v1/${path}`, {
+        method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store', signal: controller ? controller.signal : undefined
+      });
+      let data = null;
+      if (response.status !== 204) {
+        const text = await response.text();
+        if (text) { try { data = JSON.parse(text); } catch (_) { data = null; } }
+      }
+      if (!response.ok) throw onlineError('http', response.status);
+      return { data, range: response.headers.get('content-range') || '' };
+    } catch (error) {
+      if (error && error.onlineKind) throw error;
+      throw onlineError('network');
+    } finally { clearTimeout(timer); }
+  }
+
+  const qs = params => Object.entries(params).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  const toScore = value => Math.max(0, Math.floor(Number(value) || 0));
+
+  async function onlineFetchTop() {
+    const C = ONLINE.cols;
+    const { data } = await sbRequest(`${ONLINE.table}?${qs({ select: `${C.name},${C.best}`, [C.best]: 'gt.0', order: `${C.best}.desc,${C.name}.asc`, limit: ONLINE.topSize })}`);
+    return Array.isArray(data) ? data.map(row => ({ name: String(row[C.name] ?? '').slice(0, 40), best: toScore(row[C.best]) })) : [];
+  }
+
+  // On ne lit JAMAIS l'identifiant des autres joueurs : seulement notre propre ligne.
+  async function onlineFetchMine() {
+    const C = ONLINE.cols;
+    const { data } = await sbRequest(`${ONLINE.table}?${qs({ select: `${C.name},${C.best}`, [C.id]: `eq.${online.id}`, limit: 1 })}`);
+    const row = Array.isArray(data) && data[0] ? data[0] : null;
+    return row ? { name: String(row[C.name] ?? ''), best: toScore(row[C.best]) } : null;
+  }
+
+  async function onlineRefreshRank() {
+    if (!online.name || !online.synced) return 0;
+    const C = ONLINE.cols;
+    const { range } = await sbRequest(`${ONLINE.table}?${qs({ select: C.best, [C.best]: `gt.${online.synced}`, limit: 1 })}`, { prefer: 'count=exact' });
+    const match = /\/(\d+)$/.exec(range);
+    if (!match) return 0;
+    online.rank = Number(match[1]) + 1; online.rankBest = online.synced; saveOnline();
+    return online.rank;
+  }
+
+  // ----- Synchronisation : crée le joueur, renvoie un record SEULEMENT s'il bat celui du serveur -----
+  const onlineSync = { running: false, again: false, lastSent: 0 };
+  const onlineNeedsSync = () => Boolean(online.name) && (online.syncedName !== online.name || toScore(profile.best) > online.synced);
+
+  async function onlineSyncNow() {
+    if (!online.name) return false;
+    if (onlineSync.running) { onlineSync.again = true; return false; }
+    onlineSync.running = true;
+    let ok = false;
+    const C = ONLINE.cols;
+    try {
+      const name = online.name; const best = toScore(profile.best);
+      const row = await onlineFetchMine();
+      if (!row) {
+        const { data } = await sbRequest(`${ONLINE.table}?${qs({ select: C.best })}`, { method: 'POST', body: { [C.id]: online.id, [C.name]: name, [C.best]: best }, prefer: 'return=representation' });
+        if (!Array.isArray(data) || !data.length) throw onlineError('blocked');
+        online.synced = best; online.syncedName = name; onlineSync.lastSent = best;
+      } else {
+        const patch = {};
+        if (row.name !== name) patch[C.name] = name;
+        if (best > row.best) patch[C.best] = best;
+        if (Object.keys(patch).length) {
+          const { data } = await sbRequest(`${ONLINE.table}?${qs({ [C.id]: `eq.${online.id}`, select: C.best })}`, { method: 'PATCH', body: patch, prefer: 'return=representation' });
+          if (!Array.isArray(data) || !data.length) throw onlineError('blocked');
+          if (patch[C.best]) onlineSync.lastSent = best;
+        }
+        online.synced = Math.max(row.best, best); online.syncedName = name;
+      }
+      ok = true;
+    } catch (error) {
+      if (error && error.status === 409) onlineSync.again = true; // ligne créée entre-temps : on relit
+      try { console.warn('[Pulse Grid] synchro classement impossible', error && error.message); } catch (_) { /* rien */ }
+    } finally { saveOnline(); onlineSync.running = false; }
+    if (onlineSync.again) { onlineSync.again = false; if (onlineNeedsSync()) { try { return await onlineSyncNow(); } catch (_) { return false; } } }
+    return ok;
+  }
+
+  // Appelé après une partie Classic : n'envoie rien si le record n'a pas été battu.
+  function onlineAfterClassicGame() {
+    try {
+      if (!online.name || !onlineNeedsSync()) return;
+      onlineSyncNow().then(async ok => {
+        if (!ok || !onlineSync.lastSent) return;
+        onlineSync.lastSent = 0;
+        const rank = await onlineRefreshRank().catch(() => 0);
+        showToast(rank ? `Record envoyé · #${formatNumber(rank)} mondial` : 'Record envoyé au classement');
+        renderLeaderboardTeaser();
+      }).catch(() => {});
+    } catch (_) { /* ne jamais gêner la fin de partie */ }
+  }
+  function onlineSyncSoon(delay = 1500) {
+    setTimeout(() => { try { if (onlineNeedsSync()) onlineSyncNow().then(() => renderLeaderboardTeaser()).catch(() => {}); } catch (_) { /* rien */ } }, delay);
+  }
+
+  // ----- Écran Classement -----
+  const lb = { status: 'idle', rows: [], token: 0, editing: false, draft: '', nameError: '', focus: false };
+
+  function renderLeaderboardTeaser() {
+    const sub = $('#home-leaderboard-sub'); if (!sub) return;
+    if (!online.name) sub.textContent = 'Choisis ton pseudo et rejoins le top mondial';
+    else if (online.rank && online.rankBest === online.synced) sub.textContent = `${online.name} · #${formatNumber(online.rank)} mondial`;
+    else sub.textContent = `${online.name} · Top mondial Classic`;
+  }
+
+  function openLeaderboard() {
+    lb.editing = false; lb.nameError = ''; lb.draft = '';
+    loadLeaderboard();
+  }
+
+  async function loadLeaderboard() {
+    const token = ++lb.token;
+    lb.status = 'loading'; renderLeaderboard();
+    try {
+      if (online.name && onlineNeedsSync()) await onlineSyncNow();
+      const [rows] = await Promise.all([onlineFetchTop(), online.name ? onlineRefreshRank().catch(() => 0) : 0]);
+      if (token !== lb.token) return;
+      lb.rows = rows; lb.status = 'ready';
+    } catch (error) {
+      if (token !== lb.token) return;
+      lb.status = 'error';
+      try { console.warn('[Pulse Grid] classement indisponible', error && error.message); } catch (_) { /* rien */ }
+    }
+    renderLeaderboard(); renderLeaderboardTeaser();
+  }
+
+  function startNameEdit() { lb.editing = true; lb.nameError = ''; lb.draft = online.name; lb.focus = true; renderLeaderboard(); }
+  function cancelNameEdit() { lb.editing = false; lb.nameError = ''; renderLeaderboard(); }
+
+  function submitName(raw) {
+    const result = validateName(raw);
+    if (!result.ok) { lb.nameError = result.error; lb.draft = String(raw ?? ''); lb.focus = true; playSfx('error'); vibrate([12, 40, 12]); renderLeaderboard(); return; }
+    online.name = result.value; saveOnline();
+    lb.editing = false; lb.nameError = ''; lb.draft = '';
+    playSfx('unlock'); vibrate([14, 10, 24]); showToast('Pseudo enregistré');
+    renderLeaderboardTeaser();
+    loadLeaderboard();
+  }
+
+  function leaderboardRowsHTML() {
+    let previous = null; let rank = 0;
+    return lb.rows.map((row, index) => {
+      if (row.best !== previous) { rank = index + 1; previous = row.best; }
+      const mine = Boolean(online.name) && row.name === online.name && row.best === online.synced;
+      const badge = rank <= 3 ? `<span class="lb-medal m${rank}">${rank}</span>` : `<span class="lb-pos">#${formatNumber(rank)}</span>`;
+      return `<li class="lb-row${rank <= 3 ? ` top top${rank}` : ''}${mine ? ' mine' : ''}">${badge}<span class="lb-name">${esc(row.name)}</span><strong class="lb-score">${formatNumber(row.best)}</strong></li>`;
+    }).join('');
+  }
+
+  function renderLeaderboard() {
+    const root = $('#leaderboard-content'); if (!root) return;
+    const hasName = Boolean(online.name);
+    const form = !hasName || lb.editing;
+    const intro = '<article class="shapes-intro lb-intro"><span class="eyebrow accent">COMPÉTITION</span><h2>Classement mondial</h2><p>Les meilleurs scores en mode Classic, partout dans le monde.</p></article>';
+
+    let top = '';
+    if (form) {
+      top = `<form id="lb-name-form" class="lb-name-card" autocomplete="off" novalidate><span class="eyebrow accent">${hasName ? 'CHANGER DE PSEUDO' : 'REJOINDRE LE CLASSEMENT'}</span><h3>${hasName ? 'Nouveau pseudo' : 'Choisis ton pseudo'}</h3><p>${ONLINE.nameMin} à ${ONLINE.nameMax} caractères, visible par tous les joueurs. Ton record Classic sera envoyé automatiquement.</p><input id="lb-name-input" class="lb-input" name="name" type="text" maxlength="${ONLINE.nameMax}" placeholder="Ton pseudo" value="${esc(lb.draft)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Pseudo" aria-describedby="lb-name-error" /><div id="lb-name-error" class="lb-field-error" role="alert">${esc(lb.nameError)}</div><div class="lb-form-actions">${hasName ? '<button type="button" class="ghost-button" data-action="lb-cancel-name">ANNULER</button>' : ''}<button type="submit" class="primary-button lb-submit"><span>VALIDER</span><b><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></b></button></div></form>`;
+    } else {
+      const waiting = onlineNeedsSync() ? '<small class="lb-pending">Record en attente d\u2019envoi · il partira dès que la connexion revient.</small>' : '';
+      const showRank = online.rank && online.rankBest === online.synced;
+      top = `<article class="lb-me-card"><div class="lb-me-rank">${showRank ? `#${formatNumber(online.rank)}` : '—'}</div><div class="lb-me-main"><span class="eyebrow accent">TOI</span><strong>${esc(online.name)}</strong><small>Record Classic · ${formatNumber(Math.max(profile.best, online.synced))}</small>${waiting}</div><button class="ghost-button lb-edit" data-action="lb-edit-name">MODIFIER</button></article>`;
+      if (!profile.best && !online.synced) top += '<p class="lb-hint">Joue une partie Classic pour entrer au classement.</p>';
+    }
+
+    let body = '';
+    if (lb.status === 'loading' || lb.status === 'idle') {
+      body = `<div class="lb-skeleton" aria-busy="true" aria-label="Chargement du classement">${'<span></span>'.repeat(7)}</div>`;
+    } else if (lb.status === 'error') {
+      body = `<article class="lb-state"><div class="lb-state-icon"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg></div><h3>Classement indisponible</h3><p>Impossible de joindre le serveur pour l\u2019instant. Tu peux continuer à jouer : ton record sera envoyé plus tard.</p><button class="ghost-button" data-action="lb-retry">RÉESSAYER</button></article>`;
+    } else if (!lb.rows.length) {
+      body = '<article class="lb-state"><div class="lb-state-icon"><svg class="ico" aria-hidden="true"><use href="#i-crown"/></svg></div><h3>Le classement est vide</h3><p>Sois le premier à poser un score Classic !</p></article>';
+    } else {
+      body = `<div class="section-heading"><h2>Top ${lb.rows.length}</h2><span class="section-line"></span></div><ol class="lb-list">${leaderboardRowsHTML()}</ol>`;
+    }
+
+    const ranked = !form && lb.status === 'ready' && online.rank && online.rankBest === online.synced;
+    const pinned = ranked ? `<div class="lb-pinned" aria-label="Ta position"><span class="lb-pos">#${formatNumber(online.rank)}</span><span class="lb-name">${esc(online.name)}</span><strong class="lb-score">${formatNumber(online.synced)}</strong></div>` : '';
+    root.innerHTML = `${intro}${top}${body}${pinned}`;
+    if (lb.focus) { lb.focus = false; const input = $('#lb-name-input'); if (input) { try { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } catch (_) { /* rien */ } } }
+  }
+
+  function onlineInit() {
+    document.addEventListener('submit', event => {
+      if (!event.target || event.target.id !== 'lb-name-form') return;
+      event.preventDefault();
+      submitName(new FormData(event.target).get('name'));
+    });
+    window.addEventListener('online', () => { onlineSyncSoon(600); if (state.screen === 'leaderboard' && lb.status === 'error') loadLeaderboard(); });
+    renderLeaderboardTeaser();
+    onlineSyncSoon(2500);   // renvoi silencieux d'un record resté en attente, sans retarder le lancement
   }
 
   init();

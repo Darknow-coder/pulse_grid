@@ -1064,3 +1064,94 @@ html[data-ui="soft"] .trophy-card.got { background: linear-gradient(100deg, rgba
 .tuto-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.22); }
 .tuto-dots span.on { width: 20px; border-radius: 99px; background: var(--skin-primary); }
 .tutorial-modal { text-align: center; }
+
+
+/* =====================================================================
+   FINITIONS PRO : icônes SVG, typographie, sobriété
+   ===================================================================== */
+.ico { display: inline-block; flex: 0 0 auto; width: 1.25em; height: 1.25em; vertical-align: -.22em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.icon-button .ico { width: 20px; height: 20px; vertical-align: middle; }
+.brand-mark .ico { width: 62%; height: 62%; vertical-align: middle; }
+.quick-icon .ico { width: 22px; height: 22px; vertical-align: middle; }
+.nav-item > span .ico { width: 22px; height: 22px; vertical-align: middle; }
+.header-symbol .ico { width: 22px; height: 22px; vertical-align: middle; }
+.coin-icon .ico { width: 1em; height: 1em; vertical-align: -.12em; }
+.daily-icon .ico, .mission-intro-icon .ico, .resume-icon .ico, .setting-go .ico, .trophy-icon .ico { width: 20px; height: 20px; vertical-align: middle; }
+.daily-bonus-icon .ico { width: 30px; height: 30px; color: #ffd17a; }
+.daily-arrow .ico { width: 18px; height: 18px; }
+.primary-button b .ico { width: 18px; height: 18px; vertical-align: middle; }
+.text-button .ico { width: 15px; height: 15px; margin-right: 4px; vertical-align: -.2em; }
+.trophy-icon .ico { color: var(--skin-primary); }
+.trophy-card:not(.got) .trophy-icon .ico { color: var(--muted); }
+.resume-icon .ico { fill: currentColor; stroke: none; }
+.setting-go .ico[href], .setting-go svg { stroke-width: 2; }
+
+/* Typographie : chiffres alignés, étiquettes moins criardes */
+strong, output, .game-stat, .currency-pill, .level-badge, .stat-box { font-variant-numeric: tabular-nums; }
+.eyebrow { letter-spacing: .1em; }
+.modal-kicker, .settings-title { letter-spacing: .12em; }
+
+/* Sobriété : moins de lueurs et de décors animés */
+.hero-orbit { display: none; }
+body::before, body::after { opacity: .55; }
+.hero-card { box-shadow: 0 10px 26px rgba(0,0,0,.24); }
+.quick-card { box-shadow: none; }
+
+/* Accessibilité : focus visible au clavier / lecteur d'écran, cibles tactiles confortables */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--skin-primary); outline-offset: 2px; border-radius: 10px; }
+.icon-button { min-width: 44px; min-height: 44px; }
+
+/* ===== Classement mondial (online) ===== */
+.quick-card.leaderboard-card { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; min-height: 74px; border-color: rgba(255,209,122,.28); background: linear-gradient(100deg, rgba(255,209,122,.12), rgba(139,124,255,.07)); }
+.leaderboard-card .quick-icon { margin-bottom: 0; flex: 0 0 auto; width: 38px; height: 38px; color: var(--warning); background: rgba(255,209,122,.14); }
+.leaderboard-card .lb-card-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.leaderboard-card .lb-card-copy > span { font-size: 14px; font-weight: 900; }
+.leaderboard-card .lb-card-copy small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.leaderboard-card .lb-card-arrow { display: grid; place-items: center; color: var(--warning); font-size: 18px; }
+
+.lb-name-card, .lb-me-card, .lb-state { padding: 16px; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.05); }
+.lb-name-card h3, .lb-state h3 { margin: 4px 0 6px; font-size: 18px; }
+.lb-name-card p, .lb-state p, .lb-hint { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.lb-hint { margin: -4px 4px 0; text-align: center; }
+.lb-input { display: block; width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid rgba(255,255,255,.2); border-radius: 14px; outline: 0; color: var(--text); background: rgba(8,11,24,.35); font: inherit; font-size: 16px; font-weight: 800; letter-spacing: .02em; -webkit-user-select: text; user-select: text; }
+.lb-input:focus { border-color: var(--skin-primary); box-shadow: 0 0 0 3px var(--skin-soft); }
+.lb-input::placeholder { color: var(--faint); font-weight: 600; }
+.lb-field-error { min-height: 18px; margin: 7px 2px 4px; color: var(--danger); font-size: 11px; font-weight: 800; }
+.lb-form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.lb-form-actions .primary-button { margin-top: 0; }
+.lb-submit { min-width: 150px; }
+
+.lb-me-card { display: flex; align-items: center; gap: 14px; border-color: rgba(101,232,208,.3); background: linear-gradient(100deg, rgba(101,232,208,.12), rgba(139,124,255,.07)); }
+.lb-me-rank { display: grid; flex: 0 0 auto; place-items: center; min-width: 58px; height: 52px; padding: 0 8px; border-radius: 15px; color: var(--skin-contrast); background: var(--skin-primary); font-size: 17px; font-weight: 950; }
+.lb-me-main { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.lb-me-main strong { overflow: hidden; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+.lb-me-main small { color: var(--muted); font-size: 11px; }
+.lb-me-main .lb-pending { color: var(--warning); font-size: 10px; line-height: 1.35; }
+.lb-edit { min-height: 38px; padding: 0 11px; font-size: 10px; }
+
+.lb-list { display: grid; gap: 7px; margin: 0 0 70px; padding: 0; list-style: none; }
+.lb-row, .lb-pinned { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.045); }
+.lb-row { animation: panel-rise .35s both; }
+.lb-row.mine { border-color: var(--skin-primary); background: linear-gradient(100deg, var(--skin-soft), rgba(255,255,255,.05)); }
+.lb-row.top1 { border-color: rgba(255,209,122,.55); background: linear-gradient(100deg, rgba(255,209,122,.2), rgba(255,255,255,.04)); }
+.lb-row.top2 { border-color: rgba(206,216,236,.45); background: linear-gradient(100deg, rgba(206,216,236,.15), rgba(255,255,255,.04)); }
+.lb-row.top3 { border-color: rgba(231,150,96,.5); background: linear-gradient(100deg, rgba(231,150,96,.16), rgba(255,255,255,.04)); }
+.lb-pos, .lb-medal { display: grid; flex: 0 0 auto; place-items: center; min-width: 36px; color: var(--muted); font-size: 12px; font-weight: 900; }
+.lb-medal { width: 32px; height: 32px; border-radius: 50%; color: #1c1405; font-size: 14px; font-weight: 950; }
+.lb-medal.m1 { background: linear-gradient(145deg, #fff0b0, #e8a92f); box-shadow: 0 0 14px rgba(255,209,122,.5); }
+.lb-medal.m2 { background: linear-gradient(145deg, #f4f7ff, #aab6cf); }
+.lb-medal.m3 { background: linear-gradient(145deg, #ffd0a8, #cd7f4b); }
+.lb-name { flex: 1; min-width: 0; overflow: hidden; font-size: 14px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.lb-score { flex: 0 0 auto; font-size: 14px; font-variant-numeric: tabular-nums; }
+.lb-pinned { position: fixed; z-index: 9; left: max(14px, calc((100vw - 520px) / 2 + 14px)); right: max(14px, calc((100vw - 520px) / 2 + 14px)); bottom: calc(78px + env(safe-area-inset-bottom)); border-color: var(--skin-primary); background: linear-gradient(100deg, rgba(14,24,48,.96), rgba(22,40,72,.96)); box-shadow: 0 -2px 0 rgba(255,255,255,.04), 0 10px 26px rgba(0,0,0,.35); }
+.lb-pinned .lb-pos { color: var(--skin-primary); font-size: 15px; }
+
+.lb-state { display: flex; align-items: center; flex-direction: column; text-align: center; }
+.lb-state-icon { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 6px; border-radius: 15px; color: var(--warning); background: rgba(255,209,122,.12); font-size: 22px; }
+.lb-state .ghost-button { min-width: 150px; }
+.lb-skeleton { display: grid; gap: 7px; margin-bottom: 70px; }
+.lb-skeleton span { display: block; height: 52px; border-radius: 16px; background: linear-gradient(100deg, rgba(255,255,255,.04) 30%, rgba(255,255,255,.1) 50%, rgba(255,255,255,.04) 70%) 0 0 / 220% 100%; animation: lb-shimmer 1.3s linear infinite; }
+@keyframes lb-shimmer { to { background-position: -120% 0; } }
+#leaderboard-content { display: flex; flex-direction: column; gap: 14px; }
+#leaderboard-content .lb-list, #leaderboard-content .lb-skeleton { margin-bottom: 70px; }
