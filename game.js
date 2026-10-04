@@ -24,6 +24,12 @@
   // - true  : la pièce est dessinée légèrement en avance sur la trajectoire du doigt
   //   (compense la latence de l'écran tactile) ; false : position exacte du doigt.
   const DRAG_USE_PREDICTION = false;
+  // Tolérance du placement : la pièce se « colle » à la meilleure case valide
+  // située à moins de DRAG_SNAP_RADIUS cases de sa position réelle (0 = très strict).
+  const DRAG_SNAP_RADIUS = 1.3;
+  // Décalage vertical (en pixels) de la pièce au-dessus du doigt, pour qu'elle
+  // ne soit pas cachée par le doigt. 0 = sous le doigt (comportement d'origine).
+  const DRAG_LIFT_PX = 0;
 
   const SHAPE_LIBRARY = [
     { id: 'dot', cells: [[0, 0]] },
@@ -780,6 +786,7 @@
     cancelScheduledFrame(state.drag.previewFrame);
     state.drag.sourceItem?.releasePointerCapture?.(state.drag.pointerId);
     removeDragGhost(state.drag.ghost);
+    removeDragPreviewOverlay(state.drag);
     state.drag = null;
     setDragMode(false);
     state.suppressPieceClick = false;
@@ -873,6 +880,7 @@
     };
     item.setPointerCapture?.(event.pointerId);
     setDragMode(true);
+    state.drag.overlay = createDragPreviewOverlay(state.drag);
     document.body.appendChild(ghost);
     updateGhost(event.clientX, event.clientY);
     // Vibration et son sont reportés après l'affichage de la première frame du
@@ -920,16 +928,10 @@
 
   function updateDragPreview(drag, x, y) {
     if (!drag?.ghost || state.drag !== drag) return;
-    const gridCell = getGridCellFromPoint(x, y);
-    if (!gridCell) {
-      drag.previewCellKey = '';
-      clearPreview();
-      return;
-    }
-    const cellKey = `${gridCell.row}:${gridCell.col}`;
-    if (drag.previewCellKey === cellKey) return;
-    drag.previewCellKey = cellKey;
-    const placement = getPlacementFromGridCell(drag.piece, gridCell.row, gridCell.col, { row: drag.grabRow, col: drag.grabCol });
+    const placement = resolveDragPlacement(drag, x, y);
+    if (drag.overlay) { updateDragPreviewOverlay(drag, placement); return; }
+    // Secours : si l'overlay n'a pas pu être créé, on utilise l'ancienne preview par classes.
+    if (!placement) { clearPreview(); return; }
     showPreview(drag.piece, placement);
   }
 
@@ -944,6 +946,7 @@
     const placement = getDropPlacement(drag.pendingX, drag.pendingY, drag);
     drag.sourceItem?.releasePointerCapture?.(drag.pointerId);
     removeDragGhost(drag.ghost);
+    removeDragPreviewOverlay(drag);
     state.drag = null;
     clearPreview();
     setDragMode(false);
@@ -1021,7 +1024,7 @@
     // Le fantôme conserve exactement l'offset de saisie. transform est
     // composité par le GPU et évite un nouveau layout à chaque mouvement.
     const ghostX = x - drag.grabOffsetX;
-    const ghostY = y - drag.grabOffsetY;
+    const ghostY = y - drag.grabOffsetY - DRAG_LIFT_PX;
     drag.ghost.style.transform = `translate3d(${ghostX}px, ${ghostY}px, 0)`;
   }
 
@@ -1035,6 +1038,7 @@
     const boardRect = board.getBoundingClientRect();
     const measuredRect = firstCell.getBoundingClientRect();
     const boardStyle = getComputedStyle(board);
+    const cellRadius = getComputedStyle(firstCell).borderTopLeftRadius || '8px';
     const borderLeft = parseFloat(boardStyle.borderLeftWidth) || 0;
     const borderTop = parseFloat(boardStyle.borderTopWidth) || 0;
     const paddingLeft = parseFloat(boardStyle.paddingLeft) || 0;
@@ -1049,6 +1053,7 @@
       originY: boardRect.top + borderTop + paddingTop,
       cellWidth: measuredRect.width,
       cellHeight: measuredRect.height,
+      cellRadius,
       gapX,
       gapY
     };
@@ -1093,9 +1098,106 @@
   }
 
   function getDropPlacement(clientX, clientY, drag) {
-    const gridCell = getGridCellFromPoint(clientX, clientY);
-    if (!gridCell || !drag?.piece) return null;
-    return getPlacementFromGridCell(drag.piece, gridCell.row, gridCell.col, { row: drag.grabRow, col: drag.grabCol });
+    return resolveDragPlacement(drag, clientX, clientY);
+  }
+
+  // Cherche où la pièce doit se poser. On part de la position VISUELLE de la
+  // pièce (coin haut-gauche du fantôme), arrondie à la case la plus proche,
+  // puis on cherche la meilleure place valide autour (tolérance DRAG_SNAP_RADIUS).
+  // La preview et le dépôt utilisent exactement cette même fonction.
+  function resolveDragPlacement(drag, clientX, clientY) {
+    const metrics = getBoardMetrics();
+    if (!metrics || !drag?.piece) return null;
+    const piece = drag.piece;
+    const pitchX = metrics.cellWidth + metrics.gapX;
+    const pitchY = metrics.cellHeight + metrics.gapY;
+    const fx = (clientX - drag.grabOffsetX - metrics.originX) / pitchX;
+    const fy = (clientY - drag.grabOffsetY - DRAG_LIFT_PX - metrics.originY) / pitchY;
+    const baseCol = Math.round(fx);
+    const baseRow = Math.round(fy);
+
+    const reach = Math.ceil(DRAG_SNAP_RADIUS);
+    let best = null;
+    let bestDistance = Infinity;
+    for (let dr = -reach; dr <= reach; dr++) {
+      for (let dc = -reach; dc <= reach; dc++) {
+        const row = baseRow + dr;
+        const col = baseCol + dc;
+        const distance = Math.hypot(row - fy, col - fx);
+        if (distance > DRAG_SNAP_RADIUS || distance >= bestDistance) continue;
+        if (canPlace(piece, row, col)) { best = { row, col, valid: true }; bestDistance = distance; }
+      }
+    }
+    if (best) return best;
+
+    // Aucune place valide à proximité : on montre la position en rouge si la
+    // pièce touche la grille, sinon aucune preview (pièce loin de la grille).
+    const touchesBoard = piece.cells.some(([dr, dc]) => {
+      const r = baseRow + dr; const c = baseCol + dc;
+      return r >= 0 && r < geo.rows && c >= 0 && c < geo.cols;
+    });
+    return touchesBoard ? { row: baseRow, col: baseCol, valid: false } : null;
+  }
+
+  // Preview du drag : un petit calque séparé (comme le fantôme) qui se déplace
+  // avec transform. La grille n'est donc plus redessinée à chaque changement de case.
+  function createDragPreviewOverlay(drag) {
+    const metrics = getBoardMetrics();
+    if (!metrics || !drag?.piece) return null;
+    const pitchX = metrics.cellWidth + metrics.gapX;
+    const pitchY = metrics.cellHeight + metrics.gapY;
+    const root = document.createElement('div');
+    root.className = 'drag-preview';
+    root.style.visibility = 'hidden';
+    const cells = drag.piece.cells.map(([dr, dc]) => {
+      const el = document.createElement('i');
+      el.style.left = `${dc * pitchX}px`;
+      el.style.top = `${dr * pitchY}px`;
+      el.style.width = `${metrics.cellWidth}px`;
+      el.style.height = `${metrics.cellHeight}px`;
+      el.style.borderRadius = metrics.cellRadius;
+      root.appendChild(el);
+      return { el, off: false };
+    });
+    document.body.appendChild(root);
+    return { root, cells, key: '', invalid: false };
+  }
+
+  function updateDragPreviewOverlay(drag, placement) {
+    const overlay = drag.overlay;
+    const metrics = getBoardMetrics();
+    if (!overlay || !metrics) return;
+    if (!placement) {
+      if (overlay.key !== 'none') { overlay.root.style.visibility = 'hidden'; overlay.key = 'none'; }
+      return;
+    }
+    const key = `${placement.row}:${placement.col}:${placement.valid ? 1 : 0}`;
+    if (overlay.key === key) return;
+    overlay.key = key;
+    const pitchX = metrics.cellWidth + metrics.gapX;
+    const pitchY = metrics.cellHeight + metrics.gapY;
+    const x = metrics.originX + placement.col * pitchX;
+    const y = metrics.originY + placement.row * pitchY;
+    overlay.root.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    if (overlay.invalid === placement.valid) {
+      overlay.invalid = !placement.valid;
+      overlay.root.classList.toggle('invalid', overlay.invalid);
+    }
+    drag.piece.cells.forEach(([dr, dc], index) => {
+      const r = placement.row + dr; const c = placement.col + dc;
+      const inside = r >= 0 && r < geo.rows && c >= 0 && c < geo.cols && geo.mask[r][c];
+      const entry = overlay.cells[index];
+      if (entry.off === !inside) return;
+      entry.off = !inside;
+      entry.el.classList.toggle('off', entry.off);
+    });
+    overlay.root.style.visibility = 'visible';
+  }
+
+  function removeDragPreviewOverlay(drag) {
+    if (!drag?.overlay) return;
+    drag.overlay.root.remove();
+    drag.overlay = null;
   }
 
   function selectPiece(index) {
