@@ -636,7 +636,26 @@
     bindEvents();
     initNative();
     try { onlineInit(); } catch (_) { /* l'online ne doit jamais bloquer le lancement */ }
+    try { initUiPolish(); } catch (_) { /* purement décoratif */ }
     setTimeout(() => $('#boot-screen')?.classList.add('done'), 650);
+  }
+
+  // Petit « pop » sur les chiffres qui changent (score, pièces, niveau). Purement visuel.
+  function initUiPolish() {
+    if (typeof MutationObserver !== 'function') return;
+    const startedAt = Date.now();
+    ['#game-score', '#game-best', '#home-coins', '#shop-coins', '#home-level'].forEach(selector => {
+      const el = $(selector); if (!el) return;
+      let last = el.textContent;
+      el.addEventListener('animationend', () => el.classList.remove('bump'));
+      new MutationObserver(() => {
+        const now = el.textContent; if (now === last) return;
+        last = now;
+        if (Date.now() - startedAt < 1800) return;   // pas de pop pendant le chargement initial
+        el.classList.remove('bump');
+        scheduleFrame(() => el.classList.add('bump'));
+      }).observe(el, { childList: true, characterData: true, subtree: true });
+    });
   }
 
   function bindEvents() {
@@ -1562,6 +1581,9 @@
     if (state.screen === 'game' && route !== 'game' && state.gameActive) { openPauseModal(); return; }
     state.screen = route;
     $$('.screen').forEach(screen => screen.classList.toggle('active', screen.id === `screen-${route}`));
+    // Classe temporaire : déclenche les animations d'entrée de la page (cascade, barres), une seule fois.
+    const entering = $(`#screen-${route}`);
+    if (entering) { entering.classList.add('enter'); clearTimeout(entering._enterTimer); entering._enterTimer = setTimeout(() => entering.classList.remove('enter'), 1300); }
     $('#bottom-nav').classList.toggle('hidden', route === 'game');
     $$('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.route === route));
     if (route === 'home') renderHome();

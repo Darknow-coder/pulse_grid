@@ -170,7 +170,7 @@ button.button-press { animation: button-press .22s cubic-bezier(.2,.8,.2,1) both
 @media (max-width: 350px) { .audio-preferences { grid-template-columns: 1fr 1fr; }.volume-preference { grid-column: 1 / -1; }.audio-preference { padding: 6px; } }
 
 @media (prefers-reduced-motion: reduce) {
-  *:not(.pc):not(.pc *), *:not(.pc):not(.pc *)::before, *:not(.pc):not(.pc *)::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
+  *:not(.pc):not(.pc *):not(#screen-shop):not(#screen-shop *):not(#screen-collection):not(#screen-collection *):not(.cosmetic-modal):not(.cosmetic-modal *), *:not(.pc):not(.pc *):not(#screen-shop):not(#screen-shop *):not(#screen-collection):not(#screen-collection *):not(.cosmetic-modal):not(.cosmetic-modal *)::before, *:not(.pc):not(.pc *):not(#screen-shop):not(#screen-shop *):not(#screen-collection):not(#screen-collection *):not(.cosmetic-modal):not(.cosmetic-modal *)::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
   .clear-feedback.show .clear-feedback-badge { animation: none !important; opacity: 1 !important; transform: translateY(-8%) scale(1) !important; filter: none !important; }
   .high-score-feedback.show { animation: none !important; opacity: 1 !important; visibility: visible !important; }
   .high-score-feedback.show::before, .high-score-feedback.show span, .high-score-feedback.show strong { animation: none !important; opacity: 1 !important; transform: none !important; }
@@ -224,7 +224,7 @@ html.is-dragging .tip-dot { animation: none !important; }
 .pack-opening-box { animation-duration: 1.05s; }.pack-opening-box.opened { box-shadow: 0 0 0 11px rgba(255,209,122,.08), 0 0 70px rgba(255,209,122,.52); }.pack-opening-box.opened::after { animation-duration: 1.15s; }.pack-box-glow { position: absolute; inset: 22%; border-radius: 50%; background: #fff2a8; opacity: 0; filter: blur(9px); pointer-events: none; }.pack-opening-box.opened .pack-box-glow { animation: box-glow-burst .68s ease-out both; }
 .pack-reward { position: relative; overflow: hidden; }.pack-reward::after { content: ""; position: absolute; top: -20%; bottom: -20%; left: -35%; width: 18%; background: rgba(255,255,255,.4); transform: skewX(-20deg) translateX(-140%); }.pack-reward.reveal::after { animation: reward-sheen .65s .1s ease-out both; }.pack-reward-icon { transition: transform .2s, box-shadow .2s; }.pack-reward.reveal .pack-reward-icon { animation: reward-icon-bounce .55s cubic-bezier(.15,.85,.22,1) both; }
 @keyframes stage-reveal { 0% { opacity: 0; transform: scale(.78) translateY(8px); } 42% { opacity: 1; transform: scale(1.06) translateY(-2px); } 100% { opacity: 1; transform: scale(1) translateY(0); } } @keyframes stage-rays { to { transform: rotate(360deg); } } @keyframes burst-ray { 0% { opacity: 0; transform: rotate(var(--burst-angle)) translateY(0) scaleY(.2); } 32% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--burst-angle)) translateY(calc(var(--burst-distance) * -1)) scaleY(1); } } @keyframes box-glow-burst { 0% { opacity: 0; transform: scale(.2); } 28% { opacity: .9; transform: scale(2.2); } 100% { opacity: 0; transform: scale(3.5); } } @keyframes reward-sheen { 0% { transform: skewX(-20deg) translateX(-140%); } 100% { transform: skewX(-20deg) translateX(720%); } } @keyframes reward-icon-bounce { 0% { transform: scale(.5) rotate(-12deg); } 55% { transform: scale(1.18) rotate(5deg); } 100% { transform: scale(1) rotate(0); } }
-@media (prefers-reduced-motion: reduce) { .pack-opening-box, .pack-opening-box::before, .pack-opening-box::after, .pack-reveal-stage.reveal, .pack-reveal-stage.reveal::before, .pack-burst i { animation: none !important; }.pack-reveal-stage.reveal { opacity: 1; transform: none; }.pack-box-glow { display: none; } }
+/* (règle retirée : l'ouverture de pack garde ses animations) */
 
 /* ===== Ouverture de pack : cinématique plein écran ===== */
 .pc { position: fixed; inset: 0; z-index: 44; display: flex; flex-direction: column; align-items: center; overflow: hidden; padding: calc(env(safe-area-inset-top, 0px) + 14px) 18px calc(env(safe-area-inset-bottom, 0px) + 18px); color: var(--text); background: #05070f; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; animation: pc-fade-in .3s ease both; }
@@ -727,7 +727,7 @@ html.is-dragging .tip-dot { animation: none !important; }
 .cp-ready { margin-top: 10px; color: var(--good); font-size: 10px; font-weight: 800; text-align: center; }
 
 @media (max-width: 360px) { .theme-copy strong { font-size: 19px; } .theme-stage .mini-board { width: 108px; } .cos-stage { height: 138px; } }
-@media (prefers-reduced-motion: reduce) { .cell.demo-line, .cell.demo-line::before, .fxp i, .cos-btn::after, .cp-cta::after, .cos-stage::before, .theme-stage::before { animation: none !important; } }
+/* (règle retirée : les aperçus de la boutique gardent leurs animations) */
 
 /* Atelier : les titres de section ne doivent pas déteindre sur les cartes */
 .collection-section .cos-card h3 { margin: 0; color: var(--text); font-size: 15px; letter-spacing: -.025em; text-transform: none; }
@@ -1022,7 +1022,8 @@ button.setting-row:active { transform: scale(.985); }
 
 /* Options d'affichage */
 html[data-tip="off"] .game-tip { display: none; }
-html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0ms !important; }
+/* Les packs, la boutique, l'atelier et les aperçus cosmétiques gardent toujours leurs animations : elles font partie de la récompense. */
+html[data-motion="reduced"] *:not(.pc):not(.pc *):not(#screen-shop):not(#screen-shop *):not(#screen-collection):not(#screen-collection *):not(.cosmetic-modal):not(.cosmetic-modal *), html[data-motion="reduced"] *:not(.pc):not(.pc *):not(#screen-shop):not(#screen-shop *):not(#screen-collection):not(#screen-collection *):not(.cosmetic-modal):not(.cosmetic-modal *)::before, html[data-motion="reduced"] *:not(.pc):not(.pc *):not(#screen-shop):not(#screen-shop *):not(#screen-collection):not(#screen-collection *):not(.cosmetic-modal):not(.cosmetic-modal *)::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0ms !important; }
 html[data-motion="reduced"] .fx-particle, html[data-motion="reduced"] .hero-orbit { display: none; }
 html[data-ui="soft"] .setting-row, html[data-ui="soft"] .settings-group .ghost-button { background: rgba(48,72,118,.78); border-color: rgba(200,220,255,.2); }
 
@@ -1165,3 +1166,46 @@ body::before, body::after { opacity: .55; }
 .drag-preview i { position: absolute; display: block; box-sizing: border-box; border: 1px solid rgba(191,255,232,.82); background: rgba(105,239,207,.32); box-shadow: inset 0 0 0 2px rgba(183,255,229,.72), 0 0 12px rgba(101,232,208,.25); }
 .drag-preview.invalid i { border-color: rgba(255,175,190,.70); background: rgba(255,112,139,.22); box-shadow: inset 0 0 0 2px rgba(255,127,158,.68); }
 .drag-preview i.off { visibility: hidden; }
+
+
+/* ===== Finition : animations d'entrée (légères : transform + opacity uniquement) ===== */
+@keyframes item-rise { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+@keyframes bar-grow { from { transform: scaleX(0); } }
+@keyframes value-bump { 40% { transform: scale(1.22); } }
+@keyframes nav-pop { 0% { transform: scale(.8); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes modal-item-rise { from { opacity: 0; transform: translateY(10px); } }
+
+/* Les éléments d'une page apparaissent en cascade quand on ouvre l'écran (classe .enter posée par showScreen). */
+.screen.enter .settings-group, .screen.enter .trophy-card, .screen.enter .world-card, .screen.enter .shapes-intro, .screen.enter .subpage-topbar,
+.lb-intro, .lb-me-card, .lb-name-card, .lb-state, .lb-row, .lb-pinned { --i: 10; animation: item-rise .42s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i) * 45ms); }
+.screen.enter .settings-group:nth-child(1), .screen.enter .trophy-card:nth-child(1), .screen.enter .world-card:nth-child(1), .screen.enter .shapes-intro:nth-child(1), .screen.enter .subpage-topbar:nth-child(1), .lb-intro:nth-child(1), .lb-me-card:nth-child(1), .lb-name-card:nth-child(1), .lb-state:nth-child(1), .lb-row:nth-child(1), .lb-pinned:nth-child(1) { --i: 1; }
+.screen.enter .settings-group:nth-child(2), .screen.enter .trophy-card:nth-child(2), .screen.enter .world-card:nth-child(2), .screen.enter .shapes-intro:nth-child(2), .screen.enter .subpage-topbar:nth-child(2), .lb-intro:nth-child(2), .lb-me-card:nth-child(2), .lb-name-card:nth-child(2), .lb-state:nth-child(2), .lb-row:nth-child(2), .lb-pinned:nth-child(2) { --i: 2; }
+.screen.enter .settings-group:nth-child(3), .screen.enter .trophy-card:nth-child(3), .screen.enter .world-card:nth-child(3), .screen.enter .shapes-intro:nth-child(3), .screen.enter .subpage-topbar:nth-child(3), .lb-intro:nth-child(3), .lb-me-card:nth-child(3), .lb-name-card:nth-child(3), .lb-state:nth-child(3), .lb-row:nth-child(3), .lb-pinned:nth-child(3) { --i: 3; }
+.screen.enter .settings-group:nth-child(4), .screen.enter .trophy-card:nth-child(4), .screen.enter .world-card:nth-child(4), .screen.enter .shapes-intro:nth-child(4), .screen.enter .subpage-topbar:nth-child(4), .lb-intro:nth-child(4), .lb-me-card:nth-child(4), .lb-name-card:nth-child(4), .lb-state:nth-child(4), .lb-row:nth-child(4), .lb-pinned:nth-child(4) { --i: 4; }
+.screen.enter .settings-group:nth-child(5), .screen.enter .trophy-card:nth-child(5), .screen.enter .world-card:nth-child(5), .screen.enter .shapes-intro:nth-child(5), .screen.enter .subpage-topbar:nth-child(5), .lb-intro:nth-child(5), .lb-me-card:nth-child(5), .lb-name-card:nth-child(5), .lb-state:nth-child(5), .lb-row:nth-child(5), .lb-pinned:nth-child(5) { --i: 5; }
+.screen.enter .settings-group:nth-child(6), .screen.enter .trophy-card:nth-child(6), .screen.enter .world-card:nth-child(6), .screen.enter .shapes-intro:nth-child(6), .screen.enter .subpage-topbar:nth-child(6), .lb-intro:nth-child(6), .lb-me-card:nth-child(6), .lb-name-card:nth-child(6), .lb-state:nth-child(6), .lb-row:nth-child(6), .lb-pinned:nth-child(6) { --i: 6; }
+.screen.enter .settings-group:nth-child(7), .screen.enter .trophy-card:nth-child(7), .screen.enter .world-card:nth-child(7), .screen.enter .shapes-intro:nth-child(7), .screen.enter .subpage-topbar:nth-child(7), .lb-intro:nth-child(7), .lb-me-card:nth-child(7), .lb-name-card:nth-child(7), .lb-state:nth-child(7), .lb-row:nth-child(7), .lb-pinned:nth-child(7) { --i: 7; }
+.screen.enter .settings-group:nth-child(8), .screen.enter .trophy-card:nth-child(8), .screen.enter .world-card:nth-child(8), .screen.enter .shapes-intro:nth-child(8), .screen.enter .subpage-topbar:nth-child(8), .lb-intro:nth-child(8), .lb-me-card:nth-child(8), .lb-name-card:nth-child(8), .lb-state:nth-child(8), .lb-row:nth-child(8), .lb-pinned:nth-child(8) { --i: 8; }
+.screen.enter .settings-group:nth-child(9), .screen.enter .trophy-card:nth-child(9), .screen.enter .world-card:nth-child(9), .screen.enter .shapes-intro:nth-child(9), .screen.enter .subpage-topbar:nth-child(9), .lb-intro:nth-child(9), .lb-me-card:nth-child(9), .lb-name-card:nth-child(9), .lb-state:nth-child(9), .lb-row:nth-child(9), .lb-pinned:nth-child(9) { --i: 9; }
+.screen.enter .settings-group:nth-child(10), .screen.enter .trophy-card:nth-child(10), .screen.enter .world-card:nth-child(10), .screen.enter .shapes-intro:nth-child(10), .screen.enter .subpage-topbar:nth-child(10), .lb-intro:nth-child(10), .lb-me-card:nth-child(10), .lb-name-card:nth-child(10), .lb-state:nth-child(10), .lb-row:nth-child(10), .lb-pinned:nth-child(10) { --i: 10; }
+
+/* Barres de progression : elles se remplissent à l'ouverture de l'écran. */
+.screen.enter .xp-track span, .screen.enter .mini-progress span { transform-origin: left center; animation: bar-grow .75s cubic-bezier(.2,.8,.2,1) .15s backwards; }
+
+/* Chiffres (score, pièces, niveau) : petit « pop » à chaque changement. */
+#game-score, #game-best, #home-coins, #shop-coins, #home-level { display: inline-block; }
+.bump { animation: value-bump .34s cubic-bezier(.2,.9,.3,1.3); }
+
+/* Barre de navigation : l'icône active rebondit. */
+.nav-item.active > span { display: inline-block; animation: nav-pop .38s cubic-bezier(.2,.9,.3,1.3); }
+
+/* Fenêtres : le contenu apparaît en cascade et la fenêtre monte avec un peu plus de relief. */
+.modal-card { transition: transform .32s cubic-bezier(.2,.9,.25,1); }
+.modal-backdrop.open .modal-card > .modal-kicker, .modal-backdrop.open .modal-card > h2, .modal-backdrop.open .modal-card > p, .modal-backdrop.open .modal-card > form, .modal-backdrop.open .modal-card > .modal-actions { animation: modal-item-rise .4s cubic-bezier(.2,.8,.2,1) backwards; }
+.modal-backdrop.open .modal-card > .modal-kicker { animation-delay: .05s; }
+.modal-backdrop.open .modal-card > h2 { animation-delay: .1s; }
+.modal-backdrop.open .modal-card > p, .modal-backdrop.open .modal-card > form { animation-delay: .16s; }
+.modal-backdrop.open .modal-card > .modal-actions { animation-delay: .22s; }
+
+/* Retour tactile : les cartes et onglets s'enfoncent légèrement au toucher. */
+.tab-button:active, .setting-action:active, .world-card:active { transform: scale(.975); }
