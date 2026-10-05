@@ -2560,6 +2560,7 @@
 
   function openModal(content, variant = '') {
     const modalCard = $('#modal-card');
+    state.mandatoryModal = variant === 'name-modal';   // fenêtre impossible à fermer sans valider
     modalCard.className = `modal-card${variant ? ` ${variant}` : ''}`;
     modalCard.innerHTML = content;
     $('#modal-backdrop').classList.add('open');
@@ -2567,6 +2568,7 @@
   }
 
   function closeModal() {
+    if (state.mandatoryModal) return;
     state.preview = null;
     if (state.packOpeningTimer !== null) clearTimeout(state.packOpeningTimer);
     state.packOpeningTimer = null;
@@ -3664,7 +3666,8 @@
       synced: count(o.synced),            // meilleur score connu côté serveur
       syncedName: typeof o.syncedName === 'string' ? o.syncedName : '',
       rank: count(o.rank),                // dernier rang connu (affichage hors ligne)
-      rankBest: count(o.rankBest)
+      rankBest: count(o.rankBest),
+      asked: count(o.asked)               // nombre de fois où la fenêtre « choisis ton pseudo » a été affichée
     };
   }
   let online = loadOnline();
@@ -3866,14 +3869,55 @@
     if (lb.focus) { lb.focus = false; const input = $('#lb-name-input'); if (input) { try { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } catch (_) { /* rien */ } } }
   }
 
+  // ----- Choix du pseudo au premier lancement -----
+  // Le pseudo est OBLIGATOIRE : la fenêtre s'affiche à chaque lancement tant
+  // qu'aucun pseudo n'est enregistré, et elle ne peut pas être fermée sans valider
+  // (ni clic à côté, ni Échap, ni bouton retour). Le pseudo reste modifiable
+  // ensuite depuis l'écran Classement.
+  function askNameSoon(delay = 1100, attempt = 0) {
+    setTimeout(() => {
+      try {
+        if (online.name) return;
+        const busy = $('#modal-backdrop')?.classList.contains('open') || state.gameActive || state.screen !== 'home';
+        if (busy) { askNameSoon(2500, attempt + 1); return; }
+        online.asked += 1; saveOnline();
+        openNameModal();
+      } catch (_) { /* ne jamais gêner le lancement */ }
+    }, delay);
+  }
+
+  function openNameModal(error = '', draft = '') {
+    openModal(`<span class="modal-kicker">BIENVENUE</span><h2>Choisis ton pseudo</h2><p>Choisis un pseudo pour commencer. Il sera visible dans le classement mondial, et ton record Classic sera envoyé automatiquement dès ta première partie.</p><form id="first-name-form" autocomplete="off" novalidate><input id="first-name-input" class="lb-input" name="name" type="text" maxlength="${ONLINE.nameMax}" placeholder="Ton pseudo" value="${esc(draft)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Pseudo" aria-describedby="first-name-error" /><div id="first-name-error" class="lb-field-error" role="alert">${esc(error)}</div><small class="name-hint">${ONLINE.nameMin} à ${ONLINE.nameMax} caractères · modifiable plus tard dans Classement.</small><div class="lb-form-actions"><button type="submit" class="primary-button lb-submit"><span>VALIDER</span><b><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg></b></button></div></form>`, 'name-modal');
+    setTimeout(() => { try { $('#first-name-input')?.focus(); } catch (_) { /* rien */ } }, 300);
+  }
+
+  function submitFirstName(raw) {
+    const result = validateName(raw);
+    if (!result.ok) {
+      playSfx('error'); vibrate([12, 40, 12]);
+      const box = $('#first-name-error'); if (box) box.textContent = result.error;
+      try { $('#first-name-input')?.focus(); } catch (_) { /* rien */ }
+      return;
+    }
+    online.name = result.value; saveOnline();
+    state.mandatoryModal = false;
+    closeModal();
+    playSfx('unlock'); vibrate([14, 10, 24]); showToast(`Bienvenue, ${online.name} !`);
+    renderLeaderboardTeaser();
+    onlineSyncSoon(400);   // crée la ligne du joueur : son record comptera dès la première partie
+  }
+
   function onlineInit() {
     document.addEventListener('submit', event => {
-      if (!event.target || event.target.id !== 'lb-name-form') return;
+      if (!event.target) return;
+      if (event.target.id === 'first-name-form') { event.preventDefault(); submitFirstName(new FormData(event.target).get('name')); return; }
+      if (event.target.id !== 'lb-name-form') return;
       event.preventDefault();
       submitName(new FormData(event.target).get('name'));
     });
     window.addEventListener('online', () => { onlineSyncSoon(600); if (state.screen === 'leaderboard' && lb.status === 'error') loadLeaderboard(); });
     renderLeaderboardTeaser();
+    askNameSoon(1100);      // 1er lancement : on propose de choisir un pseudo
     onlineSyncSoon(2500);   // renvoi silencieux d'un record resté en attente, sans retarder le lancement
   }
 

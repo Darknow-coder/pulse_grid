@@ -1,13 +1,15 @@
-Drag mobile — correctifs v2
+Version : pseudo obligatoire + drag v2
 
-1) Placement tolérant
-- La position de dépôt est calculée à partir de la position VISUELLE de la pièce (coin haut-gauche du fantôme), arrondie à la case la plus proche.
-- Si cette position est invalide, on cherche la meilleure place valide à moins de DRAG_SNAP_RADIUS (1,3 case) et la pièce s'y « colle ».
-- La preview et le dépôt utilisent la même fonction : resolveDragPlacement().
+1) Pseudo obligatoire
+- Tant qu'aucun pseudo n'est enregistré, la fenêtre "Choisis ton pseudo" s'affiche à chaque lancement (≈1 s après le chargement).
+- Elle ne se ferme pas sans valider : pas de bouton "plus tard", clic à côté, touche Échap et bouton retour Android sont ignorés (state.mandatoryModal).
+- Si une autre fenêtre est ouverte ou si une partie est en cours, elle attend et réessaie toutes les 2,5 s.
+- Règles du pseudo : 3 à 16 caractères, sans < > & " ' ` \. Le pseudo reste modifiable dans l'écran Classement.
+- À la validation, la ligne du joueur est créée sur le serveur : le record de la première partie compte.
 
-2) Preview sans redessiner la grille
-- Avant : chaque changement de case modifiait des classes sur 64 cellules (skins/plateaux lourds => repaint du plateau => ghost en retard).
-- Maintenant : un petit calque .drag-preview (position: fixed) se déplace avec transform. La grille ne bouge plus pendant le drag.
+2) Drag v2 (réappliqué)
+- Placement tolérant : DRAG_SNAP_RADIUS (1,3 case) ; la preview et le dépôt utilisent la même fonction resolveDragPlacement().
+- Preview en calque séparé (.drag-preview) : la grille n'est plus redessinée pendant le drag.
+- DRAG_LIFT_PX (0 par défaut) : décale la pièce au-dessus du doigt.
 
-Réglages en haut de game.js : DRAG_SNAP_RADIUS (tolérance), DRAG_LIFT_PX (pièce au-dessus du doigt, 0 par défaut).
 Fichiers modifiés : game.js, style.css. index.html inchangé.

@@ -1156,6 +1156,10 @@ body::before, body::after { opacity: .55; }
 #leaderboard-content { display: flex; flex-direction: column; gap: 14px; }
 #leaderboard-content .lb-list, #leaderboard-content .lb-skeleton { margin-bottom: 70px; }
 
+/* Fenêtre « choisis ton pseudo » : placée en haut pour que le clavier ne la cache pas. */
+.modal-backdrop:has(.name-modal) { align-items: flex-start; padding-top: max(16px, 10svh); }
+.name-modal .name-hint { display: block; margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+
 /* Preview du drag : calque séparé qui se déplace avec transform (la grille n'est pas redessinée). */
 .drag-preview { position: fixed; z-index: 2147483645; left: 0; top: 0; width: 0; height: 0; pointer-events: none; transform: translate3d(0,0,0); will-change: transform; transition: none !important; }
 .drag-preview i { position: absolute; display: block; box-sizing: border-box; border: 1px solid rgba(191,255,232,.82); background: rgba(105,239,207,.32); box-shadow: inset 0 0 0 2px rgba(183,255,229,.72), 0 0 12px rgba(101,232,208,.25); }
